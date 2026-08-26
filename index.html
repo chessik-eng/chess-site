@@ -151,11 +151,6 @@
                 const username = currentUser.user_metadata?.username || currentUser.email;
                 document.getElementById('welcome-user').textContent = 'Игрок: ' + username;
                 document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Статус:</b> Активен';
-
-                // Сохраняем или обновляем игрока в таблице профилей
-                await supabaseClient.from('profiles').upsert([
-                    { id: currentUser.id, username: username, last_seen: new Date() }
-                ]);
             }
         }
 
@@ -205,19 +200,12 @@
 
         async function loadPlayers() {
             const box = document.getElementById('players-list');
-            box.innerHTML = '<div><b>Система:</b> Загрузка списка игроков...</div>';
+            box.innerHTML = '<div><b>Система:</b> Загрузка списка участников...</div>';
 
-            // Обновляем активность текущего пользователя при открытии списка
-            if (currentUser) {
-                const username = currentUser.user_metadata?.username || currentUser.email;
-                await supabaseClient.from('profiles').upsert([
-                    { id: currentUser.id, username: username, last_seen: new Date() }
-                ]);
-            }
-
+            // Берем ники из таблицы messages
             const { data, error } = await supabaseClient
-                .from('profiles')
-                .select('*');
+                .from('messages')
+                .select('username');
 
             if (error) {
                 box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки игроков</b></div>';
@@ -226,21 +214,18 @@
 
             box.innerHTML = '';
             if (!data || data.length === 0) {
-                box.innerHTML = '<div><b>Система:</b> Пока нет зарегистрированных игроков.</div>';
+                box.innerHTML = '<div><b>Система:</b> Пока нет активных игроков.</div>';
             } else {
-                const now = new Date();
-                data.forEach(player => {
-                    // Считаем игрока онлайн, если он заходил за последние 3 минуты
-                    const lastSeenDate = new Date(player.last_seen);
-                    const diffMinutes = (now - lastSeenDate) / 1000 / 60;
-                    const isOnline = diffMinutes < 3;
+                // Собираем уникальные ники с помощью Set, чтобы не повторялись
+                const uniquePlayers = [...new Set(data.map(item => item.username).filter(Boolean))];
 
-                    const statusBadge = isOnline 
-                        ? '<span style="color: #4CAF50;">🟢 В сети</span>' 
-                        : '<span style="color: #9e9e9e;">⚪ Не в сети</span>';
-
-                    box.innerHTML += `<div style="margin-bottom: 6px;"><b>${player.username || 'Игрок'}</b> — ${statusBadge}</div>`;
-                });
+                if (uniquePlayers.length === 0) {
+                    box.innerHTML = '<div><b>Система:</b> Пока нет игроков.</div>';
+                } else {
+                    uniquePlayers.forEach(name => {
+                        box.innerHTML += `<div style="margin-bottom: 6px;"><b>${name}</b> — <span style="color: #4CAF50;">🟢 Активен</span></div>`;
+                    });
+                }
             }
         }
 
