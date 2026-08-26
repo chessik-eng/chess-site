@@ -242,7 +242,7 @@
     <!-- Авторизация -->
     <div class="auth-box" id="authBox">
         <h2>Шахматный Клуб</h2>
-        <input type="text" id="username" placeholder="Ваш никнейм">
+        <input type="text" id="username" placeholder="Email или никнейм">
         <input type="password" id="password" placeholder="Пароль">
         <button id="loginBtn">Войти</button>
         <button id="registerBtn" style="background: #2196F3;">Регистрация</button>
@@ -304,6 +304,19 @@
     </div>
 
     <script>
+        // Инициализация Supabase (ваши данные подключения)
+        const SUPABASE_URL = 'https://ваш-проект.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'ваш-ключ';
+        
+        let supabaseClient = null;
+        try {
+            if (typeof supabase !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.error('Supabase init error:', e);
+        }
+
         // Функция переключения вкладок
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -317,6 +330,72 @@
                 document.getElementById('challengesTab').classList.add('active');
             }
         }
+
+        // Обработка входа и регистрации
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const statusDiv = document.getElementById('status');
+
+            if (!user || !pass) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = 'Заполните все поля!';
+                return;
+            }
+
+            if (supabaseClient) {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email: user, password: pass });
+                if (error) {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = 'Ошибка входа: ' + error.message;
+                } else {
+                    statusDiv.style.color = '#2ecc71';
+                    statusDiv.textContent = 'Успешный вход!';
+                    document.getElementById('authBox').style.display = 'none';
+                    document.getElementById('lobbyBox').style.display = 'flex';
+                    document.getElementById('welcomeUser').textContent = data.user.email;
+                }
+            } else {
+                // Демо-режим, если бэкенд не подключен
+                document.getElementById('authBox').style.display = 'none';
+                document.getElementById('lobbyBox').style.display = 'flex';
+                document.getElementById('welcomeUser').textContent = user;
+            }
+        });
+
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const statusDiv = document.getElementById('status');
+
+            if (!user || !pass) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = 'Заполните все поля!';
+                return;
+            }
+
+            if (supabaseClient) {
+                const { data, error } = await supabaseClient.auth.signUp({ email: user, password: pass });
+                if (error) {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = 'Ошибка регистрации: ' + error.message;
+                } else {
+                    statusDiv.style.color = '#2ecc71';
+                    statusDiv.textContent = 'Регистрация успешна! Проверьте почту или войдите.';
+                }
+            } else {
+                statusDiv.style.color = '#2ecc71';
+                statusDiv.textContent = 'Регистрация выполнена (демо)!';
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            document.getElementById('lobbyBox').style.display = 'none';
+            document.getElementById('authBox').style.display = 'flex';
+        });
 
         // --- Сохранение чата в память браузера (localStorage) ---
         const chatMessages = document.getElementById('chatMessages');
