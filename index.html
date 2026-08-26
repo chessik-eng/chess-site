@@ -15,7 +15,7 @@
         .btn-back { background: #757575; color: white; }
         #message { text-align: center; font-size: 14px; margin-top: 10px; }
         .section { display: none; }
-        .chat-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; }
+        .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -39,6 +39,7 @@
         <p id="welcome-user" style="text-align: center; margin-bottom: 20px;"></p>
         <button type="button" class="btn-login" onclick="showSection('game-section')">Играть партию</button>
         <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
+        <button type="button" class="btn-reg" onclick="openPlayers()">Игроки</button>
         <button type="button" class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
@@ -62,6 +63,15 @@
         </div>
         <input type="text" id="chat-input" placeholder="Введите сообщение...">
         <button type="button" class="btn-login" id="send-btn">Отправить</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Список игроков -->
+    <div class="card section" id="players-section">
+        <h2>Игроки клуба</h2>
+        <div class="players-box" id="players-list">
+            <div><b>Система:</b> Загрузка списка...</div>
+        </div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
@@ -141,6 +151,11 @@
                 const username = currentUser.user_metadata?.username || currentUser.email;
                 document.getElementById('welcome-user').textContent = 'Игрок: ' + username;
                 document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Статус:</b> Активен';
+
+                // Сохраняем или обновляем игрока в таблице профилей
+                await supabaseClient.from('profiles').upsert([
+                    { id: currentUser.id, username: username, last_seen: new Date() }
+                ]);
             }
         }
 
@@ -157,6 +172,11 @@
         function openChat() {
             showSection('chat-section');
             loadMessages();
+        }
+
+        function openPlayers() {
+            showSection('players-section');
+            loadPlayers();
         }
 
         async function loadMessages() {
@@ -181,6 +201,47 @@
                 });
             }
             box.scrollTop = box.scrollHeight;
+        }
+
+        async function loadPlayers() {
+            const box = document.getElementById('players-list');
+            box.innerHTML = '<div><b>Система:</b> Загрузка списка игроков...</div>';
+
+            // Обновляем активность текущего пользователя при открытии списка
+            if (currentUser) {
+                const username = currentUser.user_metadata?.username || currentUser.email;
+                await supabaseClient.from('profiles').upsert([
+                    { id: currentUser.id, username: username, last_seen: new Date() }
+                ]);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('*');
+
+            if (error) {
+                box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки игроков</b></div>';
+                return;
+            }
+
+            box.innerHTML = '';
+            if (!data || data.length === 0) {
+                box.innerHTML = '<div><b>Система:</b> Пока нет зарегистрированных игроков.</div>';
+            } else {
+                const now = new Date();
+                data.forEach(player => {
+                    // Считаем игрока онлайн, если он заходил за последние 3 минуты
+                    const lastSeenDate = new Date(player.last_seen);
+                    const diffMinutes = (now - lastSeenDate) / 1000 / 60;
+                    const isOnline = diffMinutes < 3;
+
+                    const statusBadge = isOnline 
+                        ? '<span style="color: #4CAF50;">🟢 В сети</span>' 
+                        : '<span style="color: #9e9e9e;">⚪ Не в сети</span>';
+
+                    box.innerHTML += `<div style="margin-bottom: 6px;"><b>${player.username || 'Игрок'}</b> — ${statusBadge}</div>`;
+                });
+            }
         }
 
         async function sendMessage() {
