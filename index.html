@@ -5,8 +5,6 @@
     <title>Шахматный Клуб — Зал, Игроки и Чат</title>
     <meta name="google-site-verification" content="tA8bWlQXzDRsVSZwC3Nhmq_JPD1gaam2M2IkcDWvNRg" />
     
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- jQuery, ChessboardJS и Chess.js -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
@@ -242,7 +240,7 @@
     <!-- Авторизация -->
     <div class="auth-box" id="authBox">
         <h2>Шахматный Клуб</h2>
-        <input type="text" id="username" placeholder="Email или никнейм">
+        <input type="text" id="username" placeholder="Ваш никнейм">
         <input type="password" id="password" placeholder="Пароль">
         <button id="loginBtn">Войти</button>
         <button id="registerBtn" style="background: #2196F3;">Регистрация</button>
@@ -304,18 +302,6 @@
     </div>
 
     <script>
-        // Инициализация Supabase
-        const SUPABASE_URL = 'https://ваш-проект.supabase.co';
-        const SUPABASE_ANON_KEY = 'ваш-ключ';
-        let supabaseClient = null;
-        try {
-            if (typeof supabase !== 'undefined') {
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-        } catch (e) {
-            console.error('Supabase init error:', e);
-        }
-
         // Функция переключения вкладок
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -330,10 +316,10 @@
             }
         }
 
-        // Обработка входа
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+        // Обработка входа (Демо-режим)
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
             const statusDiv = document.getElementById('status');
 
             if (!user || !pass) {
@@ -342,30 +328,15 @@
                 return;
             }
 
-            if (supabaseClient) {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email: user, password: pass });
-                if (error) {
-                    statusDiv.style.color = '#e74c3c';
-                    statusDiv.textContent = 'Ошибка входа: ' + error.message;
-                } else {
-                    statusDiv.style.color = '#2ecc71';
-                    statusDiv.textContent = 'Успешный вход!';
-                    document.getElementById('authBox').style.display = 'none';
-                    document.getElementById('lobbyBox').style.display = 'flex';
-                    document.getElementById('welcomeUser').textContent = data.user.email;
-                }
-            } else {
-                // Демо-режим, если бэкенд не подключен
-                document.getElementById('authBox').style.display = 'none';
-                document.getElementById('lobbyBox').style.display = 'flex';
-                document.getElementById('welcomeUser').textContent = user;
-            }
+            document.getElementById('authBox').style.display = 'none';
+            document.getElementById('lobbyBox').style.display = 'flex';
+            document.getElementById('welcomeUser').textContent = user;
         });
 
-        // Обработка регистрации
-        document.getElementById('registerBtn').addEventListener('click', async () => {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+        // Обработка регистрации (Демо-режим)
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
             const statusDiv = document.getElementById('status');
 
             if (!user || !pass) {
@@ -374,26 +345,12 @@
                 return;
             }
 
-            if (supabaseClient) {
-                const { data, error } = await supabaseClient.auth.signUp({ email: user, password: pass });
-                if (error) {
-                    statusDiv.style.color = '#e74c3c';
-                    statusDiv.textContent = 'Ошибка регистрации: ' + error.message;
-                } else {
-                    statusDiv.style.color = '#2ecc71';
-                    statusDiv.textContent = 'Регистрация успешна! Войдите в систему.';
-                }
-            } else {
-                statusDiv.style.color = '#2ecc71';
-                statusDiv.textContent = 'Регистрация выполнена (демо)!';
-            }
+            statusDiv.style.color = '#2ecc71';
+            statusDiv.textContent = 'Регистрация успешна! Теперь нажмите «Войти».';
         });
 
         // Кнопка выхода
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
-            }
+        document.getElementById('logoutBtn').addEventListener('click', () => {
             document.getElementById('lobbyBox').style.display = 'none';
             document.getElementById('authBox').style.display = 'flex';
         });
