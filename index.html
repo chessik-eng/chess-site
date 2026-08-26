@@ -18,6 +18,7 @@
         .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
+    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -149,8 +150,15 @@
                 currentUser = session.user;
                 showSection('game-hall');
                 const username = currentUser.user_metadata?.username || currentUser.email;
+                
+                // Определяем звание для профиля
+                let role = 'Обычный игрок';
+                if (username.toLowerCase() === 'шахматный клуб') {
+                    role = 'Создатель сайта ⚙️';
+                }
+
                 document.getElementById('welcome-user').textContent = 'Игрок: ' + username;
-                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Статус:</b> Активен';
+                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Звание:</b> ' + role + '<br><b>Статус:</b> Активен';
             }
         }
 
@@ -200,32 +208,32 @@
 
         async function loadPlayers() {
             const box = document.getElementById('players-list');
-            box.innerHTML = '<div><b>Система:</b> Загрузка списка участников...</div>';
+            box.innerHTML = '<div><b>Система:</b> Загрузка списка...</div>';
 
-            // Берем ники из таблицы messages
             const { data, error } = await supabaseClient
                 .from('messages')
                 .select('username');
 
             if (error) {
-                box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки игроков</b></div>';
+                box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки</b></div>';
                 return;
             }
 
             box.innerHTML = '';
             if (!data || data.length === 0) {
-                box.innerHTML = '<div><b>Система:</b> Пока нет активных игроков.</div>';
+                box.innerHTML = '<div><b>Система:</b> Список пуст.</div>';
             } else {
-                // Собираем уникальные ники с помощью Set, чтобы не повторялись
-                const uniquePlayers = [...new Set(data.map(item => item.username).filter(Boolean))];
+                const names = [...new Set(data.map(i => i.username))];
+                names.forEach(name => {
+                    const playerName = name || 'Гость';
+                    // Проверяем, является ли игрок создателем сайта
+                    let roleBadge = '<span style="color: #aaa; font-size: 12px;">(Обычный игрок)</span>';
+                    if (playerName.toLowerCase() === 'шахматный клуб') {
+                        roleBadge = '<span style="color: #FFD700; font-size: 12px;">(Создатель сайта ⚙️)</span>';
+                    }
 
-                if (uniquePlayers.length === 0) {
-                    box.innerHTML = '<div><b>Система:</b> Пока нет игроков.</div>';
-                } else {
-                    uniquePlayers.forEach(name => {
-                        box.innerHTML += `<div style="margin-bottom: 6px;"><b>${name}</b> — <span style="color: #4CAF50;">🟢 Активен</span></div>`;
-                    });
-                }
+                    box.innerHTML += `<div style="margin-bottom: 6px;"><b>${playerName}</b> ${roleBadge} — <span style="color: #4CAF50;">🟢 В сети</span></div>`;
+                });
             }
         }
 
