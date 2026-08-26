@@ -22,7 +22,7 @@
         .player-link:hover { color: #90CAF9; }
         .bot-btn { background: #ff9800; color: white; }
 
-        /* Идеальная и аккуратная шахматная доска */
+        /* Шахматная доска */
         #chessboard {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -44,7 +44,6 @@
         }
         .light { background: #f0d9b5; }
         .dark { background: #b58863; }
-        /* Цвет самих фигур: белые светлые с тенью, черные темные */
         .white-piece { color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
         .black-piece { color: #111; text-shadow: 0 1px 1px rgba(255,255,255,0.4); }
         .square.selected { background: #7b61ff !important; }
@@ -130,6 +129,8 @@
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
             'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
         };
+
+        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
 
         async function handleRegister() {
             const email = document.getElementById('email').value;
@@ -311,7 +312,6 @@
                 if (move) {
                     window.setTimeout(makeBotMove, 300);
                 } else {
-                    // Если кликнули на другую свою фигуру — перевыбираем её
                     const piece = game.get(square);
                     if (piece && piece.color === 'w') {
                         selectedSquare = square;
@@ -324,30 +324,66 @@
         function makeBotMove() {
             if (game.game_over()) return;
 
-            let moves = game.moves();
+            let moves = game.moves({ verbose: true });
             if (moves.length === 0) return;
 
             let selectedMove = null;
 
             if (currentBotDifficulty === 'easy') {
-                selectedMove = moves[Math.floor(Math.random() * moves.length)];
-            } else if (currentBotDifficulty === 'medium') {
-                let captureMoves = moves.filter(m => m.includes('x') || m.includes('+'));
-                if (captureMoves.length > 0 && Math.random() > 0.3) {
-                    selectedMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
+                // Легкий: ходит полностью случайно
+                let randomMove = moves[Math.floor(Math.random() * moves.length)];
+                game.move(randomMove);
+            } 
+            else if (currentBotDifficulty === 'medium') {
+                // Средний: предпочитает бить фигуры или ставить шахи
+                let captures = moves.filter(m => m.captured || m.san.includes('+'));
+                if (captures.length > 0 && Math.random() > 0.3) {
+                    selectedMove = captures[Math.floor(Math.random() * captures.length)];
                 } else {
                     selectedMove = moves[Math.floor(Math.random() * moves.length)];
                 }
-            } else {
-                let smartMoves = moves.filter(m => m.includes('x') || m.includes('+') || m.includes('#'));
-                if (smartMoves.length > 0) {
-                    selectedMove = smartMoves[Math.floor(Math.random() * smartMoves.length)];
-                } else {
-                    selectedMove = moves[Math.floor(Math.random() * moves.length)];
+                game.move(selectedMove);
+            } 
+            else {
+                // Сложный (~2000): ищет лучшие ходы по ценности фигур (не зевает ферзей, бьет дороже)
+                let bestScore = -99999;
+                let bestMoves = [];
+
+                for (let i = 0; i < moves.length; i++) {
+                    let move = moves[i];
+                    game.move(move);
+                    
+                    let score = 0;
+                    if (move.captured) {
+                        score += pieceValues[move.captured] * 10;
+                    }
+                    if (game.in_checkmate()) {
+                        score += 10000;
+                    } else if (game.in_check()) {
+                        score += 50;
+                    }
+
+                    // Штраф, если бот сам подставляется под удар (простая проверка на взятие следующим ходом)
+                    let opponentMoves = game.moves({ verbose: true });
+                    let hangs = opponentMoves.some(om => om.to === move.to);
+                    if (hangs && !move.captured) {
+                        score -= (pieceValues[move.piece] || 10) * 8;
+                    }
+
+                    game.undo();
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoves = [move];
+                    } else if (score === bestScore) {
+                        bestMoves.push(move);
+                    }
                 }
+
+                selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+                game.move(selectedMove);
             }
 
-            game.move(selectedMove);
             renderBoard();
 
             if (game.in_checkmate()) {
