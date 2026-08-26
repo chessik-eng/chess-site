@@ -5,15 +5,17 @@
     <title>Шахматный Клуб — Зал, Игроки и Чат</title>
     <style>
         body { font-family: sans-serif; background: #222; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .auth-card, .hall-card { background: #333; padding: 30px; border-radius: 8px; width: 350px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .card { background: #333; padding: 30px; border-radius: 8px; width: 380px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         h2 { text-align: center; margin-bottom: 20px; }
         input { width: 100%; padding: 10px; margin-bottom: 12px; border: none; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
         .btn-login { background: #4CAF50; color: white; }
         .btn-reg { background: #2196F3; color: white; }
         .btn-logout { background: #f44336; color: white; }
+        .btn-back { background: #757575; color: white; }
         #message { text-align: center; font-size: 14px; margin-top: 10px; }
-        .hall-section { display: none; }
+        .section { display: none; }
+        .chat-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,7 +23,7 @@
 <body>
 
     <!-- Окно авторизации -->
-    <div class="auth-card" id="auth-form">
+    <div class="card section" id="auth-form" style="display: block;">
         <h2>Шахматный Клуб</h2>
         <input type="email" id="email" placeholder="Электронная почта">
         <input type="text" id="username" placeholder="Придумайте ник">
@@ -31,20 +33,48 @@
         <div id="message"></div>
     </div>
 
-    <!-- Главный зал со всеми функциями -->
-    <div class="hall-card hall-section" id="game-hall">
+    <!-- Главный зал -->
+    <div class="card section" id="game-hall">
         <h2>Шахматный Зал</h2>
         <p id="welcome-user" style="text-align: center; margin-bottom: 20px;"></p>
-        
-        <button class="btn-login" onclick="startChessGame()">Играть партию</button>
-        <button class="btn-reg" onclick="openChat()">Общий чат</button>
-        <button class="btn-reg" onclick="openProfile()">Профиль</button>
+        <button class="btn-login" onclick="showSection('game-section')">Играть партию</button>
+        <button class="btn-reg" onclick="showSection('chat-section')">Общий чат</button>
+        <button class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
         <button class="btn-logout" onclick="handleLogout()">Выйти</button>
+    </div>
+
+    <!-- Раздел игры (Шахматная доска) -->
+    <div class="card section" id="game-section">
+        <h2>Игровая Партия</h2>
+        <div style="text-align: center; background: #444; padding: 40px; border-radius: 6px; margin-bottom: 15px;">
+            ♔ ♕ ♖ ♗ ♘ ♙<br>
+            [ Шахматная доска загружена ]<br>
+            ♟ ♞ ♝ ♜ ♛ ♚
+        </div>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Общий чат -->
+    <div class="card section" id="chat-section">
+        <h2>Общий Чат</h2>
+        <div class="chat-box" id="chat-messages">
+            <div><b>Система:</b> Добро пожаловать в чат клуба!</div>
+        </div>
+        <input type="text" id="chat-input" placeholder="Введите сообщение...">
+        <button class="btn-login" onclick="sendMessage()">Отправить</button>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Профиль -->
+    <div class="card section" id="profile-section">
+        <h2>Профиль игрока</h2>
+        <p id="profile-info"></p>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
     <script>
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Укажите ваш ключ проекта, если нужно
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         async function handleRegister() {
@@ -59,7 +89,7 @@
                 return;
             }
 
-            const { data, error } = await supabaseClient.auth.signUp({
+            const { error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
                 options: {
@@ -82,7 +112,7 @@
             const password = document.getElementById('password').value;
             const msg = document.getElementById('message');
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
+            const { error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password
             });
@@ -98,9 +128,9 @@
         async function checkUserSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
-                document.getElementById('auth-form').style.display = 'none';
-                document.getElementById('game-hall').style.display = 'block';
+                showSection('game-hall');
                 document.getElementById('welcome-user').textContent = 'Игрок: ' + session.user.email;
+                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + session.user.email + '<br><b>Статус:</b> Активен';
             }
         }
 
@@ -109,16 +139,19 @@
             location.reload();
         }
 
-        function startChessGame() {
-            alert('Запуск шахматной доски и игры...');
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+            document.getElementById(sectionId).style.display = 'block';
         }
 
-        function openChat() {
-            alert('Открытие общего чата...');
-        }
-
-        function openProfile() {
-            alert('Ваш профиль и статистика...');
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const box = document.getElementById('chat-messages');
+            if (input.value.trim() !== '') {
+                box.innerHTML += `<div><b>Вы:</b> ${input.value}</div>`;
+                input.value = '';
+                box.scrollTop = box.scrollHeight;
+            }
         }
 
         window.onload = () => {
