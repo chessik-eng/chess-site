@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Шахматный Клуб — Зал, Игроки и Чат</title>
+    <!-- Подключаем стили и скрипты для шахматной доски -->
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <style>
@@ -20,29 +24,8 @@
         .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
         .player-link { color: #64B5F6; cursor: pointer; text-decoration: underline; }
         .player-link:hover { color: #90CAF9; }
+        #board { width: 360px; margin: 0 auto 15px auto; }
         .bot-btn { background: #ff9800; color: white; }
-
-        /* Стили для красивой текстовой доски */
-        #chessboard {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            width: 320px;
-            height: 320px;
-            margin: 0 auto 15px auto;
-            border: 3px solid #555;
-            border-radius: 4px;
-        }
-        .square {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 32px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .light { background: #f0d9b5; color: #000; }
-        .dark { background: #b58863; color: #000; }
-        .square.selected { background: #7b61ff !important; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -80,7 +63,7 @@
             <button type="button" class="bot-btn" onclick="startBotGame('medium')">2. Средний (~1500)</button>
             <button type="button" class="bot-btn" onclick="startBotGame('hard')">3. Сложный (~2000)</button>
         </div>
-        <div id="chessboard"></div>
+        <div id="board"></div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
@@ -117,14 +100,9 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        let board = null;
         let game = new Chess();
         let currentBotDifficulty = 'easy';
-        let selectedSquare = null;
-
-        const pieceSymbols = {
-            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
-            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
-        };
 
         async function handleRegister() {
             const email = document.getElementById('email').value;
@@ -234,75 +212,56 @@
 
         function openGameSection() {
             showSection('game-section');
-            renderBoard();
+            if (!board) {
+                initBoard();
+            } else {
+                board.resize();
+            }
+        }
+
+        function initBoard() {
+            const config = {
+                draggable: true,
+                position: 'start',
+                // Используем абсолютно стабильный официальный путь к иконкам figures изunpkg
+                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png',
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd
+            };
+            board = Chessboard('board', config);
         }
 
         function startBotGame(difficulty) {
             currentBotDifficulty = difficulty;
             game.reset();
-            selectedSquare = null;
-            renderBoard();
+            board.start();
             let name = 'Лёгкий бот (1000)';
             if (difficulty === 'medium') name = 'Средний бот (1500)';
             if (difficulty === 'hard') name = 'Сложный бот (2000)';
             document.getElementById('game-status').textContent = 'Игра против: ' + name;
         }
 
-        function renderBoard() {
-            const boardEl = document.getElementById('chessboard');
-            boardEl.innerHTML = '';
-            const boardData = game.board();
-
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const squareEl = document.createElement('div');
-                    const isLight = (r + c) % 2 === 0;
-                    squareEl.className = `square ${isLight ? 'light' : 'dark'}`;
-                    
-                    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-                    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
-                    const squareName = files[c] + ranks[r];
-
-                    squareEl.dataset.square = squareName;
-
-                    const piece = boardData[r][c];
-                    if (piece) {
-                        squareEl.textContent = pieceSymbols[piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()];
-                    }
-
-                    if (selectedSquare === squareName) {
-                        squareEl.classList.add('selected');
-                    }
-
-                    squareEl.addEventListener('click', () => onSquareClick(squareName));
-                    boardEl.appendChild(squareEl);
-                }
-            }
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+            // Ходят только белые (игрок)
+            if (piece.search(/^b/) !== -1) return false;
         }
 
-        function onSquareClick(square) {
-            if (game.game_over()) return;
+        function onDrop(source, target) {
+            let move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
 
-            if (!selectedSquare) {
-                const piece = game.get(square);
-                if (piece && piece.color === 'w') {
-                    selectedSquare = square;
-                    renderBoard();
-                }
-            } else {
-                const move = game.move({
-                    from: selectedSquare,
-                    to: square,
-                    promotion: 'q'
-                });
+            if (move === null) return 'snapback';
 
-                selectedSquare = null;
-                renderBoard();
+            window.setTimeout(makeBotMove, 300);
+        }
 
-                if (move) {
-                    window.setTimeout(makeBotMove, 300);
-                }
-            }
+        function onSnapEnd() {
+            board.position(game.fen());
         }
 
         function makeBotMove() {
@@ -332,7 +291,7 @@
             }
 
             game.move(selectedMove);
-            renderBoard();
+            board.position(game.fen());
 
             if (game.in_checkmate()) {
                 alert('Мат! Игра окончена.');
