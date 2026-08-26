@@ -159,8 +159,7 @@
 
             const { data, error } = await supabaseClient
                 .from('messages')
-                .select('*')
-                .order('id', { ascending: true });
+                .select('*');
 
             if (error) {
                 box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки чата</b></div>';
