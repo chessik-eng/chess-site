@@ -105,7 +105,7 @@
                 msg.textContent = 'Ошибка: ' + error.message;
             } else {
                 msg.style.color = '#4CAF50';
-                msg.textContent = 'Ссылка для подтверждения отправлена на почту!';
+                msg.textContent = 'Аккаунт создан! Теперь можно войти.';
             }
         }
 
@@ -153,34 +153,46 @@
             loadMessages();
         }
 
-        function loadMessages() {
+        async function loadMessages() {
             const box = document.getElementById('chat-messages');
-            let messages = JSON.parse(localStorage.getItem('chess_chat_messages')) || [];
+            box.innerHTML = '<div><b>Система:</b> Загрузка...</div>';
+
+            const { data, error } = await supabaseClient
+                .from('messages')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (error) {
+                box.innerHTML = '<div style="color: #ff6b6b;"><b>Ошибка загрузки чата</b></div>';
+                return;
+            }
 
             box.innerHTML = '';
-            if (messages.length === 0) {
+            if (!data || data.length === 0) {
                 box.innerHTML = '<div><b>Система:</b> Пока нет сообщений. Будьте первыми!</div>';
             } else {
-                messages.forEach(msg => {
+                data.forEach(msg => {
                     box.innerHTML += `<div><b>${msg.username}:</b> ${msg.content}</div>`;
                 });
             }
             box.scrollTop = box.scrollHeight;
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text || !currentUser) return;
 
             const username = currentUser.user_metadata?.username || currentUser.email;
-            let messages = JSON.parse(localStorage.getItem('chess_chat_messages')) || [];
-            
-            messages.push({ username: username, content: text });
-            localStorage.setItem('chess_chat_messages', JSON.stringify(messages));
 
-            input.value = '';
-            loadMessages();
+            const { error } = await supabaseClient
+                .from('messages')
+                .insert([{ username: username, content: text }]);
+
+            if (!error) {
+                input.value = '';
+                loadMessages();
+            }
         }
 
         window.onload = () => {
