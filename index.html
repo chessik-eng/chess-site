@@ -18,6 +18,7 @@
         .chat-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
+    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -190,12 +191,11 @@
             const text = input.value.trim();
             if (!text) return;
 
-            if (!currentUser) {
-                alert('Ошибка: сессия не найдена. Пожалуйста, войдите в аккаунт заново.');
-                return;
+            // Определяем никнейм: берем из сессии, либо ставим универсальный, если сессия сбросилась
+            let username = 'Гость';
+            if (currentUser) {
+                username = currentUser.user_metadata?.username || currentUser.email;
             }
-
-            const username = currentUser.user_metadata?.username || currentUser.email;
 
             const { error } = await supabaseClient
                 .from('messages')
@@ -204,6 +204,7 @@
                 ]);
 
             if (error) {
+                console.error('Ошибка отправки:', error);
                 alert('Ошибка отправки: ' + error.message);
             } else {
                 input.value = '';
@@ -216,13 +217,21 @@
 
             const sendBtn = document.getElementById('send-btn');
             if (sendBtn) {
-                sendBtn.addEventListener('click', sendMessage);
+                sendBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sendMessage();
+                });
+                sendBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    sendMessage();
+                });
             }
 
             const chatInput = document.getElementById('chat-input');
             if (chatInput) {
                 chatInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
+                        e.preventDefault();
                         sendMessage();
                     }
                 });
