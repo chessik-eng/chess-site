@@ -49,7 +49,7 @@
         .white-piece { color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
         .black-piece { color: #111; text-shadow: 0 1px 1px rgba(255,255,255,0.4); }
         .square.selected { background: #7b61ff !important; }
-        #analysis-panel { background: #222; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 10px; color: #a5d6a7; min-height: 25px; }
+        #analysis-panel { background: #222; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 10px; color: #a5d6a7; min-height: 25px; text-align: left; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -73,15 +73,16 @@
         <p id="welcome-user" style="margin-bottom: 15px;"></p>
         <button type="button" class="btn-login" onclick="openGameSection()">Игра с ботом</button>
         <button type="button" class="online-btn" onclick="openOnlineLobby()">Играть онлайн (Лобби)</button>
+        <button type="button" class="bot-btn" onclick="openAnalysisMode()">Анализ партии (Стокфиш)</button>
         <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
         <button type="button" class="btn-reg" onclick="openPlayers()">Игроки</button>
         <button type="button" class="btn-reg" onclick="openMyProfile()">Профиль</button>
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
-    <!-- Раздел игры с ботами -->
+    <!-- Раздел игры с ботами / Анализа -->
     <div class="card section" id="game-section">
-        <h2>Игра против Бот-Клуба</h2>
+        <h2 id="section-title">Игра против Бот-Клуба</h2>
         
         <div id="step-color">
             <p style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">За какой цвет хотите играть?</p>
@@ -102,7 +103,7 @@
         </div>
 
         <div id="chessboard" style="display: none;"></div>
-        <div id="analysis-panel" style="display: none;">🤖 Стокфиш анализ: ожидание хода...</div>
+        <div id="analysis-panel" style="display: none;">🤖 Стокфиш: сделайте ход для анализа...</div>
         <button type="button" id="analysis-btn" class="bot-btn" style="display: none; background: #3f51b5;" onclick="requestStockfishAnalysis()">Запросить анализ Stockfish</button>
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
@@ -156,6 +157,7 @@
         let playerColor = 'white';
         let selectedSquare = null;
         let isOnlineGame = false;
+        let isAnalysisMode = false;
         let activeRoomId = null;
         let onlineChannel = null;
 
@@ -256,7 +258,9 @@
 
         function openGameSection() {
             isOnlineGame = false;
+            isAnalysisMode = false;
             showSection('game-section');
+            document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'none';
@@ -264,9 +268,29 @@
             document.getElementById('analysis-btn').style.display = 'none';
         }
 
+        function openAnalysisMode() {
+            isOnlineGame = false;
+            isAnalysisMode = true;
+            game.reset();
+            selectedSquare = null;
+            playerColor = 'white';
+
+            showSection('game-section');
+            document.getElementById('section-title').textContent = 'Анализ партии (Stockfish)';
+            document.getElementById('step-color').style.display = 'none';
+            document.getElementById('step-difficulty').style.display = 'none';
+            document.getElementById('chessboard').style.display = 'grid';
+            document.getElementById('analysis-panel').style.display = 'block';
+            document.getElementById('analysis-btn').style.display = 'block';
+
+            renderBoard();
+            requestStockfishAnalysis();
+        }
+
         function resetGameMenu() {
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             isOnlineGame = false;
+            isAnalysisMode = false;
             showSection('game-hall');
         }
 
@@ -279,6 +303,7 @@
         function startBotGame(difficulty) {
             currentBotDifficulty = difficulty;
             isOnlineGame = false;
+            isAnalysisMode = false;
             game.reset();
             selectedSquare = null;
 
@@ -313,6 +338,7 @@
             activeRoomId = data.id;
             playerColor = 'white';
             isOnlineGame = true;
+            isAnalysisMode = false;
 
             setupOnlineRoomChannel(activeRoomId);
             startOnlineGameUI();
@@ -345,6 +371,7 @@
             activeRoomId = roomId;
             playerColor = 'black';
             isOnlineGame = true;
+            isAnalysisMode = false;
 
             await supabaseClient
                 .from('rooms')
@@ -359,12 +386,13 @@
             game.reset();
             selectedSquare = null;
             showSection('game-section');
+            document.getElementById('section-title').textContent = 'Онлайн Партия';
             document.getElementById('step-color').style.display = 'none';
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
             document.getElementById('analysis-panel').style.display = 'block';
             document.getElementById('analysis-btn').style.display = 'block';
-            document.getElementById('difficulty-status').textContent = `Онлайн партия — Вы играете за: ${playerColor === 'white' ? 'Белых' : 'Чёрных'}`;
+            document.getElementById('difficulty-status').textContent = `Вы играете за: ${playerColor === 'white' ? 'Белых' : 'Чёрных'}`;
             renderBoard();
         }
 
@@ -436,11 +464,12 @@
             if (game.game_over()) return;
 
             let turn = game.turn() === 'w' ? 'white' : 'black';
-            if (turn !== playerColor && !isOnlineGame) return; // в боте строго свой ход
+            if (!isAnalysisMode && turn !== playerColor && !isOnlineGame) return;
 
             if (!selectedSquare) {
                 const piece = game.get(square);
-                if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
+                // В режиме анализа можно двигать любые фигуры (и белые, и черные)
+                if (piece && (isAnalysisMode || piece.color === (playerColor === 'white' ? 'w' : 'b'))) {
                     selectedSquare = square;
                     renderBoard();
                 }
@@ -452,13 +481,15 @@
                 if (move) {
                     if (isOnlineGame) {
                         sendOnlineMove(game.fen());
+                    } else if (isAnalysisMode) {
+                        requestStockfishAnalysis();
                     } else if (!game.game_over()) {
                         window.setTimeout(makeBotMove, 100);
                     }
                     checkGameOver();
                 } else {
                     const piece = game.get(square);
-                    if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
+                    if (piece && (isAnalysisMode || piece.color === (playerColor === 'white' ? 'w' : 'b'))) {
                         selectedSquare = square;
                         renderBoard();
                     }
@@ -483,7 +514,7 @@
                     panel.textContent = '🤖 Стокфиш: Нет данных в облачной базе для этой позиции.';
                 }
             } catch (err) {
-                panel.textContent = '❌ Не удалось получить анализ Стокфиша (ошибка сети).';
+                panel.textContent = '❌ Ошибка запроса к Стокфишу.';
             }
         }
 
