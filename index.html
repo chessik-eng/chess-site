@@ -91,7 +91,7 @@
     <div class="card section" id="profile-section">
         <h2>Профиль игрока</h2>
         <p id="profile-info"></p>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад in зал</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
     <script>
@@ -223,7 +223,7 @@
             const config = {
                 draggable: true,
                 position: 'start',
-                pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png',
+                pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png',
                 onDragStart: onDragStart,
                 onDrop: onDrop,
                 onSnapEnd: onSnapEnd
@@ -273,10 +273,10 @@
 
             // Логика сложности ботов Личесс
             if (currentBotDifficulty === 'easy') {
-                // Рендомный ход (уровень ~1000)
+                // Рендомный ход (~1000)
                 selectedMove = moves[Math.floor(Math.random() * moves.length)];
             } else if (currentBotDifficulty === 'medium') {
-                // Предпочитает взятия и шахи, иначе рандом (~1500)
+                // Предпочитает взятия и шахи (~1500)
                 let captureMoves = moves.filter(m => m.includes('x') || m.includes('+'));
                 if (captureMoves.length > 0 && Math.random() > 0.3) {
                     selectedMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
@@ -284,7 +284,7 @@
                     selectedMove = moves[Math.floor(Math.random() * moves.length)];
                 }
             } else {
-                // Сложный бот (~2000): ищет взятия, шахи или развивающие ходы
+                // Сложный бот (~2000): активно ищет взятия, шахи и мат
                 let smartMoves = moves.filter(m => m.includes('x') || m.includes('+') || m.includes('#'));
                 if (smartMoves.length > 0) {
                     selectedMove = smartMoves[Math.floor(Math.random() * smartMoves.length)];
