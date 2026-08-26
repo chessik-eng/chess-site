@@ -5,11 +5,12 @@
     <title>Шахматный Клуб — Зал, Игроки и Чат</title>
     <meta name="google-site-verification" content="tA8bWlQXzDRsVSZwC3Nhmq_JPD1gaam2M2IkcDWvNRg" />
     
-    <!-- jQuery, ChessboardJS и Chess.js -->
+    <!-- jQuery, ChessboardJS, Chess.js и Supabase JS клиент -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body {
@@ -302,6 +303,13 @@
     </div>
 
     <script>
+        // Инициализация Supabase с вашими реальными данными
+        const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_63F9VzVBhnlYW9WVf4d59w_-nmYxdFV';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+
         // Функция переключения вкладок
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -316,8 +324,8 @@
             }
         }
 
-        // Обработка входа (Демо-режим)
-        document.getElementById('loginBtn').addEventListener('click', () => {
+        // Авторизация
+        document.getElementById('loginBtn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             const statusDiv = document.getElementById('status');
@@ -328,13 +336,34 @@
                 return;
             }
 
-            document.getElementById('authBox').style.display = 'none';
-            document.getElementById('lobbyBox').style.display = 'flex';
-            document.getElementById('welcomeUser').textContent = user;
+            try {
+                // Проверяем пользователя в базе Supabase
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('username', user)
+                    .eq('password', pass)
+                    .single();
+
+                if (error || !data) {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = 'Неверный никнейм или пароль!';
+                    return;
+                }
+
+                currentUser = user;
+                document.getElementById('authBox').style.display = 'none';
+                document.getElementById('lobbyBox').style.display = 'flex';
+                document.getElementById('welcomeUser').textContent = user;
+                statusDiv.textContent = '';
+            } catch (err) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = 'Ошибка подключения к базе данных.';
+            }
         });
 
-        // Обработка регистрации (Демо-режим)
-        document.getElementById('registerBtn').addEventListener('click', () => {
+        // Регистрация
+        document.getElementById('registerBtn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             const statusDiv = document.getElementById('status');
@@ -345,12 +374,29 @@
                 return;
             }
 
-            statusDiv.style.color = '#2ecc71';
-            statusDiv.textContent = 'Регистрация успешна! Теперь нажмите «Войти».';
+            try {
+                // Сохраняем нового пользователя в Supabase
+                const { error } = await supabaseClient
+                    .from('users')
+                    .insert([{ username: user, password: pass }]);
+
+                if (error) {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = 'Такой пользователь уже занят!';
+                    return;
+                }
+
+                statusDiv.style.color = '#2ecc71';
+                statusDiv.textContent = 'Регистрация успешна! Теперь нажмите «Войти».';
+            } catch (err) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = 'Ошибка регистрации.';
+            }
         });
 
         // Кнопка выхода
         document.getElementById('logoutBtn').addEventListener('click', () => {
+            currentUser = null;
             document.getElementById('lobbyBox').style.display = 'none';
             document.getElementById('authBox').style.display = 'flex';
         });
@@ -374,9 +420,10 @@
             const text = chatInput.value.trim();
             if (!text) return;
 
+            const sender = currentUser || 'Гость';
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chat-msg';
-            msgDiv.textContent = text;
+            msgDiv.textContent = `${sender}: ${text}`;
             
             chatMessages.appendChild(msgDiv);
             chatInput.value = '';
