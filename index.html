@@ -20,8 +20,6 @@
         .player-link:hover { color: #90CAF9; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
-    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -164,7 +162,7 @@
             }
         }
 
-        function showUserProfile(username, emailInfo = 'Скрыт (необходим доступ)') {
+        function showUserProfile(username, emailInfo = 'Скрыт') {
             showSection('profile-section');
             let role = 'Обычный игрок';
             if (username.toLowerCase() === 'шахматный клуб') {
@@ -217,7 +215,10 @@
                 box.innerHTML = '<div><b>Система:</b> Пока нет сообщений. Будьте первыми!</div>';
             } else {
                 data.forEach(msg => {
-                    box.innerHTML += `<div><b>${msg.username}:</b> ${msg.content}</div>`;
+                    const author = msg.username || 'Гость';
+                    box.innerHTML += `<div style="margin-bottom: 4px;">
+                        <span class="player-link" onclick="showUserProfile('${author}')"><b>${author}</b></span>: ${msg.content}
+                    </div>`;
                 });
             }
             box.scrollTop = box.scrollHeight;
