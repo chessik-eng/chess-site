@@ -146,7 +146,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iOiJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
@@ -278,7 +278,7 @@
 
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'block';
+            document.getElementById('analysis-panel').style.display = 'none'; // Стокфиш скрыт в игре с ботом
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
 
@@ -287,8 +287,9 @@
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
         }
 
-        // --- УЛУЧШЕННЫЙ ЗАПРОС К СТОКФИШУ (С ЗАЩИТОЙ ОТ ПУСТЫХ ДАННЫХ) ---
+        // --- ТОЧНЫЙ АНАЛИЗ СТОКФИШ (ТОЛЬКО ДЛЯ РЕЖИМА АНАЛИЗА) ---
         async function requestStockfishCloud() {
+            if (!isAnalysisMode) return; // Защита: не запрашиваем Стокфиш вне режима анализа
             const panel = document.getElementById('analysis-panel');
             panel.textContent = '🤖 Стокфиш анализирует позицию...';
             bestMoveFrom = null;
@@ -311,7 +312,7 @@
                         scoreText = `Мат в ${data.mate}`;
                     }
 
-                    let bestMoveUCI = data.pvs[0].moves.split(' ')[0]; // например "e2e4"
+                    let bestMoveUCI = data.pvs[0].moves.split(' ')[0]; 
                     if (bestMoveUCI && bestMoveUCI.length >= 4) {
                         bestMoveFrom = bestMoveUCI.substring(0, 2);
                         bestMoveTo = bestMoveUCI.substring(2, 4);
@@ -384,7 +385,7 @@
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Онлайн Партия';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'block';
+            document.getElementById('analysis-panel').style.display = 'none'; // Стокфиш скрыт в онлайн-игре
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'none';
             renderBoard();
@@ -485,7 +486,7 @@
             let moves = game.moves();
             if (moves.length === 0) return;
             let bestMove = moves[Math.floor(Math.random() * moves.length)];
-            game.move(bestName); // исправление на случай случайного хода
+            game.move(bestMove);
             renderBoard();
             updateHistoryDisplay();
         }
