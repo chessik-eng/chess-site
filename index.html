@@ -60,7 +60,7 @@
         <div class="chat-box" id="chat-messages">
             <div><b>Система:</b> Загрузка сообщений...</div>
         </div>
-        <input type="text" id="chat-input" placeholder="Введите сообщение...">
+        <input type="text" id="chat-input" placeholder="Введите сообщение..." onkeydown="checkEnter(event)">
         <button class="btn-login" onclick="sendMessage()">Отправить</button>
         <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
@@ -195,6 +195,12 @@
             } else {
                 input.value = '';
                 loadMessages();
+            }
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
             }
         }
 
