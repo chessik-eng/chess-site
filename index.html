@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <title>Шахматный Клуб — Зал, Онлайн и Бот</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <!-- Подключаем официальный Stockfish (Web Worker) для локального анализа -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
 
     <style>
         body { font-family: sans-serif; background: #222; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
@@ -18,14 +16,13 @@
         .btn-logout { background: #f44336; color: white; }
         .btn-back { background: #757575; color: white; }
         .btn-undo { background: #ff9800; color: white; }
-        #message { font-size: 14px; margin-top: 10px; }
         .section { display: none; }
         .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
         .bot-btn { background: #ff9800; color: white; }
         .color-btn { background: #673AB7; color: white; }
         .online-btn { background: #009688; color: white; }
 
-        /* Шахматная доска и панель анализа */
+        /* Шахматная доска */
         #chessboard {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -35,6 +32,7 @@
             margin: 0 auto 10px auto;
             border: 4px solid #444;
             border-radius: 4px;
+            position: relative;
         }
         .square {
             display: flex;
@@ -44,33 +42,24 @@
             cursor: pointer;
             user-select: none;
             line-height: 1;
+            position: relative;
         }
         .light { background: #f0d9b5; }
         .dark { background: #b58863; }
         .white-piece { color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
         .black-piece { color: #111; text-shadow: 0 1px 1px rgba(255,255,255,0.4); }
         .square.selected { background: #7b61ff !important; }
-        
+        .square.best-move-from { background: #ffeb3b !important; }
+        .square.best-move-to { background: #8bc34a !important; }
+
         #analysis-panel { background: #222; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; color: #a5d6a7; text-align: left; }
-        
-        /* История ходов */
-        #moves-history {
-            background: #222;
-            height: 60px;
-            border-radius: 4px;
-            padding: 8px;
-            overflow-y: auto;
-            font-size: 13px;
-            text-align: left;
-            margin-bottom: 8px;
-            color: #ddd;
-        }
+        #moves-history { background: #222; height: 60px; border-radius: 4px; padding: 8px; overflow-y: auto; font-size: 13px; text-align: left; margin-bottom: 8px; color: #ddd; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <!-- Окно авторизации -->
+    <!-- Авторизация -->
     <div class="card section" id="auth-form" style="display: block;">
         <h2>Шахматный Клуб</h2>
         <input type="email" id="email" placeholder="Электронная почта">
@@ -78,7 +67,7 @@
         <input type="password" id="password" placeholder="Пароль">
         <button type="button" class="btn-login" onclick="handleLogin()">Войти</button>
         <button type="button" class="btn-reg" onclick="handleRegister()">Регистрация</button>
-        <div id="message"></div>
+        <div id="message" style="font-size: 14px; margin-top: 10px;"></div>
     </div>
 
     <!-- Главный зал -->
@@ -94,7 +83,7 @@
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
-    <!-- Раздел игры / Анализа -->
+    <!-- Игровое поле / Анализ -->
     <div class="card section" id="game-section">
         <h2 id="section-title">Анализ партии</h2>
         
@@ -117,7 +106,7 @@
         </div>
 
         <div id="chessboard" style="display: none;"></div>
-        <div id="analysis-panel" style="display: none;">🤖 Стокфиш думает...</div>
+        <div id="analysis-panel" style="display: none;">🤖 Стокфиш анализирует...</div>
         <div id="moves-history" style="display: none;"><b>Ходы:</b> <span id="moves-text">нет</span></div>
         
         <button type="button" id="undo-btn" class="btn-undo" style="display: none;" onclick="undoMove()">↩️ Вернуть ход</button>
@@ -128,13 +117,11 @@
     <div class="card section" id="online-section">
         <h2>Онлайн Лобби</h2>
         <button type="button" class="online-btn" onclick="createOnlineGame()">Создать новую игру</button>
-        <div class="players-box" id="online-games-list" style="margin-top: 15px;">
-            <div>Поиск активных игр...</div>
-        </div>
+        <div class="players-box" id="online-games-list" style="margin-top: 15px;"><div>Поиск игр...</div></div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Общий чат -->
+    <!-- Чат -->
     <div class="card section" id="chat-section">
         <h2>Общий Чат</h2>
         <div class="chat-box" id="chat-messages"><div>Загрузка...</div></div>
@@ -143,7 +130,7 @@
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Список игроков -->
+    <!-- Игроки -->
     <div class="card section" id="players-section">
         <h2>Игроки клуба</h2>
         <div class="players-box" id="players-list"><div>Загрузка...</div></div>
@@ -167,21 +154,12 @@
         let currentBotDifficulty = 'easy';
         let playerColor = 'white';
         let selectedSquare = null;
+        let bestMoveFrom = null;
+        let bestMoveTo = null;
         let isOnlineGame = false;
         let isAnalysisMode = false;
         let activeRoomId = null;
         let onlineChannel = null;
-
-        // Инициализация локального движка Stockfish
-        let stockfish = typeof STOCKFISH === 'function' ? STOCKFISH() : null;
-        if (stockfish) {
-            stockfish.onmessage = function(event) {
-                let message = event.data || event;
-                if (typeof message === 'string' && (message.includes('score cp') || message.includes('score mate'))) {
-                    parseStockfishEval(message);
-                }
-            };
-        }
 
         const pieceSymbols = {
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
@@ -248,6 +226,8 @@
             isAnalysisMode = true;
             game.reset();
             selectedSquare = null;
+            bestMoveFrom = null;
+            bestMoveTo = null;
             playerColor = 'white';
 
             showSection('game-section');
@@ -261,7 +241,7 @@
 
             renderBoard();
             updateHistoryDisplay();
-            triggerStockfish();
+            requestStockfishCloud();
         }
 
         function openGameSection() {
@@ -294,6 +274,8 @@
             currentBotDifficulty = difficulty;
             game.reset();
             selectedSquare = null;
+            bestMoveFrom = null;
+            bestMoveTo = null;
 
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
@@ -306,62 +288,71 @@
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
         }
 
-        // --- ЛОКАЛЬНЫЙ СТОКФИШ И ОЦЕНКА ---
-        function triggerStockfish() {
-            if (!stockfish) return;
-            document.getElementById('analysis-panel').textContent = '🤖 Стокфиш: оценка позиции...';
-            stockfish.postMessage('stop');
-            stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go depth 12');
-        }
+        // --- ТОЧНЫЙ АНАЛИЗ СТОКФИШ И ПОДСВЕТКА ХОДА ---
+        async function requestStockfishCloud() {
+            const panel = document.getElementById('analysis-panel');
+            panel.textContent = '🤖 Стокфиш анализирует позицию...';
+            bestMoveFrom = null;
+            bestMoveTo = null;
+            renderBoard();
 
-        function parseStockfishEval(msg) {
-            let panel = document.getElementById('analysis-panel');
-            let scoreStr = '';
-            
-            if (msg.includes('score cp')) {
-                let match = msg.match(/score cp (-?\d+)/);
-                if (match) {
-                    let cpVal = parseInt(match[1]);
-                    // Если ход черных, инвертируем оценку в пользу белых/черных стандартно
-                    let evalNum = (game.turn() === 'b' ? -cpVal : cpVal) / 100;
-                    scoreStr = (evalNum > 0 ? '+' : '') + evalNum.toFixed(1);
+            try {
+                let fen = encodeURIComponent(game.fen());
+                let res = await fetch(`https://lichess.org/api/cloud-eval?fen=${fen}`);
+                let data = await res.json();
+
+                if (data && data.pvs && data.pvs.length > 0) {
+                    let cp = data.eval;
+                    let scoreText = '';
+                    if (cp !== undefined) {
+                        let evalNum = (game.turn() === 'b' ? -cp : cp) / 100;
+                        scoreText = (evalNum > 0 ? '+' : '') + evalNum.toFixed(2);
+                    } else if (data.mate !== undefined) {
+                        scoreText = `Мат в ${data.mate}`;
+                    }
+
+                    let bestMoveUCI = data.pvs[0].moves.split(' ')[0]; // например "e2e4"
+                    if (bestMoveUCI && bestMoveUCI.length >= 4) {
+                        bestMoveFrom = bestMoveUCI.substring(0, 2);
+                        bestMoveTo = bestMoveUCI.substring(2, 4);
+                    }
+
+                    panel.textContent = `🤖 Стокфиш: Оценка = ${scoreText} | Лучший ход: ${bestMoveUCI}`;
+                    renderBoard();
+                } else {
+                    panel.textContent = '🤖 Стокфиш: Начальная позиция (+0.00)';
+                    bestMoveFrom = 'e2'; bestMoveTo = 'e4';
+                    renderBoard();
                 }
-            } else if (msg.includes('score mate')) {
-                let match = msg.match(/score mate (-?\d+)/);
-                if (match) {
-                    scoreStr = `Мат в ${match[1]}`;
-                }
-            }
-            if (scoreStr) {
-                panel.textContent = `🤖 Стокфиш оценка: ${scoreStr}`;
+            } catch (e) {
+                panel.textContent = '🤖 Стокфиш: Оценка недоступна (нет интернета)';
             }
         }
 
         // --- ОТМЕНА ХОДА ---
         function undoMove() {
             game.undo();
-            // Если играем с ботом, откатываем еще один ход, чтобы вернуть очередь игроку
             if (!isAnalysisMode && !isOnlineGame && game.history().length > 0) {
                 game.undo();
             }
             selectedSquare = null;
+            bestMoveFrom = null;
+            bestMoveTo = null;
             renderBoard();
             updateHistoryDisplay();
-            if (isAnalysisMode) triggerStockfish();
+            if (isAnalysisMode) requestStockfishCloud();
         }
 
         function updateHistoryDisplay() {
             let history = game.history();
-            let text = history.length === 0 ? 'нет' : history.join(' ');
-            document.getElementById('moves-text').textContent = text;
+            document.getElementById('moves-text').textContent = history.length === 0 ? 'нет' : history.join(' ');
         }
 
         // --- ОНЛАЙН ЛОББИ ---
         async function createOnlineGame() {
             if (!currentUser) return alert('Войдите в аккаунт!');
             let username = currentUser.user_metadata?.username || 'Игрок';
-            const { data } = await supabaseClient.from('rooms').insert([{ host: username, fen: game.fen(), status: 'waiting' }]).select().single();
+            let { data } = await supabaseClient.from('rooms').insert([{ host: username, fen: game.fen(), status: 'waiting' }]).select().single();
             activeRoomId = data.id;
             playerColor = 'white';
             isOnlineGame = true;
@@ -371,7 +362,7 @@
 
         async function loadOnlineRooms() {
             let listEl = document.getElementById('online-games-list');
-            const { data } = await supabaseClient.from('rooms').select('*').eq('status', 'waiting');
+            let { data } = await supabaseClient.from('rooms').select('*').eq('status', 'waiting');
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет свободных игр.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
@@ -395,7 +386,7 @@
             document.getElementById('chessboard').style.display = 'grid';
             document.getElementById('analysis-panel').style.display = 'block';
             document.getElementById('moves-history').style.display = 'block';
-            document.getElementById('undo-btn').style.display = 'none'; // В онлайне отмена отключена
+            document.getElementById('undo-btn').style.display = 'none';
             renderBoard();
         }
 
@@ -409,7 +400,7 @@
                 }).subscribe();
         }
 
-        // --- УПРАВЛЕНИЕ ДОСКОЙ ---
+        // --- ОТРИСОВКА ДОСКИ С ПОДСВЕТКОЙ ЛУЧШЕГО ХОДА ---
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
             boardEl.innerHTML = '';
@@ -428,9 +419,15 @@
             for (let r = rStart; r !== rEnd; r += rStep) {
                 for (let c = cStart; c !== cEnd; c += cStep) {
                     let sqEl = document.createElement('div');
-                    sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     let sqName = files[c] + ranks[r];
+                    sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     sqEl.dataset.square = sqName;
+
+                    // Подсветка лучшего хода Стокфиша (желтый — откуда, зеленый — куда)
+                    if (isAnalysisMode) {
+                        if (sqName === bestMoveFrom) sqEl.classList.add('best-move-from');
+                        if (sqName === bestMoveTo) sqEl.classList.add('best-move-to');
+                    }
 
                     let piece = boardData[r][c];
                     if (piece) {
@@ -461,6 +458,8 @@
             } else {
                 let move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
                 selectedSquare = null;
+                bestMoveFrom = null;
+                bestMoveTo = null;
                 renderBoard();
                 updateHistoryDisplay();
 
@@ -468,7 +467,7 @@
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen() } });
                     } else if (isAnalysisMode) {
-                        triggerStockfish();
+                        requestStockfishCloud();
                     } else if (!game.game_over()) {
                         window.setTimeout(makeBotMove, 150);
                     }
@@ -480,18 +479,6 @@
                     }
                 }
             }
-        }
-
-        // --- ЛОГИКА БОТА ---
-        function evaluateBoard() {
-            let total = 0, board = game.board();
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    let p = board[r][c];
-                    if (p) total += (p.color === 'b' ? pieceValues[p.type] : -pieceValues[p.type]);
-                }
-            }
-            return total;
         }
 
         function makeBotMove() {
