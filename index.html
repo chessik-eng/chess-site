@@ -91,12 +91,11 @@
                 return;
             }
 
-            const { error } = await supabaseClient.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
                 options: {
-                    data: { username: username },
-                    emailRedirectTo: window.location.href
+                    data: { username: username }
                 }
             });
 
@@ -104,8 +103,17 @@
                 msg.style.color = '#ff6b6b';
                 msg.textContent = 'Ошибка: ' + error.message;
             } else {
-                msg.style.color = '#4CAF50';
-                msg.textContent = 'Аккаунт создан! Теперь можно войти.';
+                const { error: loginError } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (!loginError) {
+                    checkUserSession();
+                } else {
+                    msg.style.color = '#4CAF50';
+                    msg.textContent = 'Аккаунт создан! Теперь нажмите «Войти».';
+                }
             }
         }
 
@@ -180,7 +188,12 @@
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            if (!text || !currentUser) return;
+            if (!text) return;
+
+            if (!currentUser) {
+                alert('Ошибка: сессия не найдена. Пожалуйста, войдите в аккаунт заново.');
+                return;
+            }
 
             const username = currentUser.user_metadata?.username || currentUser.email;
 
@@ -191,7 +204,7 @@
                 ]);
 
             if (error) {
-                console.error('Ошибка отправки:', error);
+                alert('Ошибка отправки: ' + error.message);
             } else {
                 input.value = '';
                 loadMessages();
@@ -201,25 +214,15 @@
         window.onload = () => {
             checkUserSession();
 
-            // Надежная привязка кнопки отправки для телефонов и ПК (поддерживает и клик, и тап)
             const sendBtn = document.getElementById('send-btn');
             if (sendBtn) {
-                sendBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    sendMessage();
-                });
-                sendBtn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    sendMessage();
-                });
+                sendBtn.addEventListener('click', sendMessage);
             }
 
-            // Отправка по нажатию Enter с клавиатуры телефона или ПК
             const chatInput = document.getElementById('chat-input');
             if (chatInput) {
                 chatInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
-                        e.preventDefault();
                         sendMessage();
                     }
                 });
