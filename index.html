@@ -21,6 +21,7 @@
         .player-link { color: #64B5F6; cursor: pointer; text-decoration: underline; }
         .player-link:hover { color: #90CAF9; }
         .bot-btn { background: #ff9800; color: white; }
+        .color-btn { background: #673AB7; color: white; }
 
         /* Шахматная доска */
         #chessboard {
@@ -78,14 +79,29 @@
     <!-- Раздел игры с ботами -->
     <div class="card section" id="game-section">
         <h2>Игра против Бот-Клуба</h2>
-        <p id="game-status" style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">Выберите сложность бота:</p>
-        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-            <button type="button" class="bot-btn" onclick="startBotGame('easy')">1. Лёгкий (~1000)</button>
-            <button type="button" class="bot-btn" onclick="startBotGame('medium')">2. Средний (~1500)</button>
-            <button type="button" class="bot-btn" onclick="startBotGame('hard')">3. Сложный (~2000)</button>
+        
+        <!-- Шаг 1: Выбор цвета -->
+        <div id="step-color">
+            <p id="game-status" style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">За какой цвет хотите играть?</p>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <button type="button" class="color-btn" onclick="chooseColor('white')">Белые</button>
+                <button type="button" class="color-btn" onclick="chooseColor('black')">Чёрные</button>
+                <button type="button" class="color-btn" onclick="chooseColor('random')">Случайный</button>
+            </div>
         </div>
-        <div id="chessboard"></div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+
+        <!-- Шаг 2: Выбор сложности (скрыт до выбора цвета) -->
+        <div id="step-difficulty" style="display: none;">
+            <p id="difficulty-status" style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">Выберите сложность бота:</p>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <button type="button" class="bot-btn" onclick="startBotGame('easy')">1. Лёгкий</button>
+                <button type="button" class="bot-btn" onclick="startBotGame('medium')">2. Средний</button>
+                <button type="button" class="bot-btn" onclick="startBotGame('hard')">3. Сложный</button>
+            </div>
+        </div>
+
+        <div id="chessboard" style="display: none;"></div>
+        <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
 
     <!-- Общий чат -->
@@ -123,6 +139,7 @@
         let currentUser = null;
         let game = new Chess();
         let currentBotDifficulty = 'easy';
+        let playerColor = 'white';
         let selectedSquare = null;
 
         const pieceSymbols = {
@@ -240,18 +257,48 @@
 
         function openGameSection() {
             showSection('game-section');
-            renderBoard();
+            resetGameMenu();
+        }
+
+        function resetGameMenu() {
+            document.getElementById('step-color').style.display = 'block';
+            document.getElementById('step-difficulty').style.display = 'none';
+            document.getElementById('chessboard').style.display = 'none';
+            showSection('game-hall');
+        }
+
+        function chooseColor(color) {
+            if (color === 'random') {
+                playerColor = Math.random() < 0.5 ? 'white' : 'black';
+            } else {
+                playerColor = color;
+            }
+
+            document.getElementById('step-color').style.display = 'none';
+            document.getElementById('step-difficulty').style.display = 'block';
         }
 
         function startBotGame(difficulty) {
             currentBotDifficulty = difficulty;
             game.reset();
             selectedSquare = null;
+
+            document.getElementById('step-difficulty').style.display = 'none';
+            document.getElementById('chessboard').style.display = 'grid';
+
+            let diffName = 'Лёгкий (~1000)';
+            if (difficulty === 'medium') diffName = 'Средний (~1500)';
+            if (difficulty === 'hard') diffName = 'Сложный (~2000)';
+            
+            let colorName = playerColor === 'white' ? 'Белые' : 'Чёрные';
+            document.getElementById('difficulty-status').textContent = `Игра: Вы (${colorName}) против бота (${diffName})`;
+
             renderBoard();
-            let name = 'Лёгкий бот (1000)';
-            if (difficulty === 'medium') name = 'Средний бот (1500)';
-            if (difficulty === 'hard') name = 'Сложный бот (2000)';
-            document.getElementById('game-status').textContent = 'Игра против: ' + name;
+
+            // Если игрок выбрал чёрные, бот делает первый ход за белых
+            if (playerColor === 'black') {
+                window.setTimeout(makeBotMove, 200);
+            }
         }
 
         function renderBoard() {
@@ -259,16 +306,25 @@
             boardEl.innerHTML = '';
             const boardData = game.board();
 
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
+            // Если играем за чёрных, переворачиваем доску (от h до a, от 1 до 8)
+            let rStart = 0, rEnd = 8, rStep = 1;
+            let cStart = 0, cEnd = 8, cStep = 1;
+
+            if (playerColor === 'black') {
+                rStart = 7; rEnd = -1; rStep = -1;
+                cStart = 7; cEnd = -1; cStep = -1;
+            }
+
+            const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+            const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+            for (let r = rStart; r !== rEnd; r += rStep) {
+                for (let c = cStart; c !== cEnd; c += cStep) {
                     const squareEl = document.createElement('div');
                     const isLight = (r + c) % 2 === 0;
                     squareEl.className = `square ${isLight ? 'light' : 'dark'}`;
                     
-                    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-                    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
                     const squareName = files[c] + ranks[r];
-
                     squareEl.dataset.square = squareName;
 
                     const piece = boardData[r][c];
@@ -293,9 +349,13 @@
         function onSquareClick(square) {
             if (game.game_over()) return;
 
+            // Проверка, чей сейчас ход (нельзя ходить за чужой цвет)
+            let turn = game.turn() === 'w' ? 'white' : 'black';
+            if (turn !== playerColor) return;
+
             if (!selectedSquare) {
                 const piece = game.get(square);
-                if (piece && piece.color === 'w') {
+                if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
                     selectedSquare = square;
                     renderBoard();
                 }
@@ -310,10 +370,14 @@
                 renderBoard();
 
                 if (move) {
-                    window.setTimeout(makeBotMove, 100);
+                    if (!game.game_over()) {
+                        window.setTimeout(makeBotMove, 100);
+                    } else {
+                        checkGameOver();
+                    }
                 } else {
                     const piece = game.get(square);
-                    if (piece && piece.color === 'w') {
+                    if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
                         selectedSquare = square;
                         renderBoard();
                     }
@@ -336,17 +400,6 @@
             return totalEvaluation;
         }
 
-        // Умная сортировка ходов (сначала взятия)
-        function getSortedMoves() {
-            let moves = game.ugly_moves({ verbose: true });
-            return moves.sort((a, b) => {
-                let scoreA = a.captured ? pieceValues[a.captured] * 10 : 0;
-                let scoreB = b.captured ? pieceValues[b.captured] * 10 : 0;
-                return scoreB - scoreA;
-            });
-        }
-
-        // Оптимизированный алгоритм альфа-бета отсечения
         function alphaBeta(depth, alpha, beta, isMaximizing) {
             if (depth === 0 || game.game_over()) {
                 return evaluateBoard();
@@ -386,12 +439,12 @@
             if (moves.length === 0) return;
 
             let bestMove = null;
-            let depth = 2; // Лёгкий (~1000)
+            let depth = 2; // Лёгкий
 
             if (currentBotDifficulty === 'medium') {
-                depth = 3; // Средний (~1500)
+                depth = 3; // Средний
             } else if (currentBotDifficulty === 'hard') {
-                depth = 4; // Сложный (~2000) — снижена глубина до 4 для быстрого ответа
+                depth = 4; // Сложный
             }
 
             let bestValue = -99999;
@@ -418,9 +471,14 @@
 
             game.move(bestMove);
             renderBoard();
+            checkGameOver();
+        }
 
+        function checkGameOver() {
             if (game.in_checkmate()) {
                 alert('Мат! Игра окончена.');
+            } else if (game.in_draw()) {
+                alert('Ничья!');
             }
         }
 
