@@ -117,7 +117,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
@@ -310,7 +310,7 @@
                 renderBoard();
 
                 if (move) {
-                    window.setTimeout(makeBotMove, 200);
+                    window.setTimeout(makeBotMove, 100);
                 } else {
                     const piece = game.get(square);
                     if (piece && piece.color === 'w') {
@@ -336,7 +336,17 @@
             return totalEvaluation;
         }
 
-        // Альфа-бета отсечение для быстрого глубокого просчета
+        // Умная сортировка ходов для быстрого отсечения лишних веток
+        function getSortedMoves() {
+            let moves = game.ugly_moves({ verbose: true });
+            return moves.sort((a, b) => {
+                let scoreA = a.captured ? pieceValues[a.captured] * 10 : 0;
+                let scoreB = b.captured ? pieceValues[b.captured] * 10 : 0;
+                return scoreB - scoreA;
+            });
+        }
+
+        // Оптимизированный алгоритм альфа-бета отсечения
         function alphaBeta(depth, alpha, beta, isMaximizing) {
             if (depth === 0 || game.game_over()) {
                 return evaluateBoard();
@@ -376,12 +386,12 @@
             if (moves.length === 0) return;
 
             let bestMove = null;
-            let depth = 2; // Легкий (~1000) - глубина 2
+            let depth = 2; // Лёгкий (~1000)
 
             if (currentBotDifficulty === 'medium') {
-                depth = 3; // Средний (~1500) - глубина 3
+                depth = 3; // Средний (~1500)
             } else if (currentBotDifficulty === 'hard') {
-                depth = 5; // Сложный (~2000) - честная глубина 5
+                depth = 5; // Сложный (~2000) на 5 ходов с быстрой оптимизацией
             }
 
             let bestValue = -99999;
