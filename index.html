@@ -186,9 +186,13 @@
 
             const { error } = await supabaseClient
                 .from('messages')
-                .insert([{ username: username, content: text }]);
+                .insert([
+                    { username: username, content: text }
+                ]);
 
-            if (!error) {
+            if (error) {
+                console.error('Ошибка отправки:', error);
+            } else {
                 input.value = '';
                 loadMessages();
             }
