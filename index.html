@@ -117,7 +117,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
@@ -310,7 +310,7 @@
                 renderBoard();
 
                 if (move) {
-                    window.setTimeout(makeBotMove, 300);
+                    window.setTimeout(makeBotMove, 200);
                 } else {
                     const piece = game.get(square);
                     if (piece && piece.color === 'w') {
@@ -321,69 +321,92 @@
             }
         }
 
+        function evaluateBoard() {
+            let totalEvaluation = 0;
+            let board = game.board();
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let piece = board[r][c];
+                    if (piece) {
+                        let val = pieceValues[piece.type];
+                        totalEvaluation += (piece.color === 'b' ? val : -val);
+                    }
+                }
+            }
+            return totalEvaluation;
+        }
+
+        // Альфа-бета отсечение для быстрого глубокого просчета
+        function alphaBeta(depth, alpha, beta, isMaximizing) {
+            if (depth === 0 || game.game_over()) {
+                return evaluateBoard();
+            }
+
+            let moves = game.moves();
+
+            if (isMaximizing) {
+                let maxEval = -99999;
+                for (let i = 0; i < moves.length; i++) {
+                    game.move(moves[i]);
+                    let evaluation = alphaBeta(depth - 1, alpha, beta, false);
+                    game.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = 99999;
+                for (let i = 0; i < moves.length; i++) {
+                    game.move(moves[i]);
+                    let evaluation = alphaBeta(depth - 1, alpha, beta, true);
+                    game.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
         function makeBotMove() {
             if (game.game_over()) return;
 
-            let moves = game.moves({ verbose: true });
+            let moves = game.moves();
             if (moves.length === 0) return;
 
-            let selectedMove = null;
+            let bestMove = null;
+            let depth = 2; // Легкий (~1000) - глубина 2
 
-            if (currentBotDifficulty === 'easy') {
-                // Легкий: ходит полностью случайно
-                let randomMove = moves[Math.floor(Math.random() * moves.length)];
-                game.move(randomMove);
-            } 
-            else if (currentBotDifficulty === 'medium') {
-                // Средний: предпочитает бить фигуры или ставить шахи
-                let captures = moves.filter(m => m.captured || m.san.includes('+'));
-                if (captures.length > 0 && Math.random() > 0.3) {
-                    selectedMove = captures[Math.floor(Math.random() * captures.length)];
-                } else {
-                    selectedMove = moves[Math.floor(Math.random() * moves.length)];
-                }
-                game.move(selectedMove);
-            } 
-            else {
-                // Сложный (~2000): ищет лучшие ходы по ценности фигур (не зевает ферзей, бьет дороже)
-                let bestScore = -99999;
-                let bestMoves = [];
+            if (currentBotDifficulty === 'medium') {
+                depth = 3; // Средний (~1500) - глубина 3
+            } else if (currentBotDifficulty === 'hard') {
+                depth = 5; // Сложный (~2000) - честная глубина 5
+            }
 
+            let bestValue = -99999;
+
+            if (currentBotDifficulty === 'easy' && Math.random() < 0.25) {
+                bestMove = moves[Math.floor(Math.random() * moves.length)];
+            } else {
                 for (let i = 0; i < moves.length; i++) {
                     let move = moves[i];
                     game.move(move);
-                    
-                    let score = 0;
-                    if (move.captured) {
-                        score += pieceValues[move.captured] * 10;
-                    }
-                    if (game.in_checkmate()) {
-                        score += 10000;
-                    } else if (game.in_check()) {
-                        score += 50;
-                    }
-
-                    // Штраф, если бот сам подставляется под удар (простая проверка на взятие следующим ходом)
-                    let opponentMoves = game.moves({ verbose: true });
-                    let hangs = opponentMoves.some(om => om.to === move.to);
-                    if (hangs && !move.captured) {
-                        score -= (pieceValues[move.piece] || 10) * 8;
-                    }
-
+                    let boardEval = alphaBeta(depth - 1, -100000, 100000, false);
                     game.undo();
 
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMoves = [move];
-                    } else if (score === bestScore) {
-                        bestMoves.push(move);
+                    if (boardEval > bestValue) {
+                        bestValue = boardEval;
+                        bestMove = move;
                     }
                 }
-
-                selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
-                game.move(selectedMove);
             }
 
+            if (!bestMove) {
+                bestMove = moves[0];
+            }
+
+            game.move(bestMove);
             renderBoard();
 
             if (game.in_checkmate()) {
