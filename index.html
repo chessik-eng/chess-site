@@ -201,16 +201,20 @@
         window.onload = () => {
             checkUserSession();
 
-            // Жесткая привязка клика и тапа по кнопке отправки для телефонов
+            // Надежная привязка кнопки отправки для телефонов и ПК (поддерживает и клик, и тап)
             const sendBtn = document.getElementById('send-btn');
             if (sendBtn) {
-                sendBtn.onclick = function(e) {
+                sendBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     sendMessage();
-                };
+                });
+                sendBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    sendMessage();
+                });
             }
 
-            // Отправка по нажатию Enter
+            // Отправка по нажатию Enter с клавиатуры телефона или ПК
             const chatInput = document.getElementById('chat-input');
             if (chatInput) {
                 chatInput.addEventListener('keydown', (e) => {
