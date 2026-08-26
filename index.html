@@ -38,7 +38,7 @@
         <h2>Шахматный Зал</h2>
         <p id="welcome-user" style="text-align: center; margin-bottom: 20px;"></p>
         <button class="btn-login" onclick="showSection('game-section')">Играть партию</button>
-        <button class="btn-reg" onclick="showSection('chat-section')">Общий чат</button>
+        <button class="btn-reg" onclick="openChat()">Общий чат</button>
         <button class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
         <button class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
@@ -58,7 +58,7 @@
     <div class="card section" id="chat-section">
         <h2>Общий Чат</h2>
         <div class="chat-box" id="chat-messages">
-            <div><b>Система:</b> Добро пожаловать в чат клуба!</div>
+            <div><b>Система:</b> Загрузка сообщений...</div>
         </div>
         <input type="text" id="chat-input" placeholder="Введите сообщение...">
         <button class="btn-login" onclick="sendMessage()">Отправить</button>
@@ -76,6 +76,8 @@
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
 
         async function handleRegister() {
             const email = document.getElementById('email').value;
@@ -128,9 +130,11 @@
         async function checkUserSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
+                currentUser = session.user;
                 showSection('game-hall');
-                document.getElementById('welcome-user').textContent = 'Игрок: ' + session.user.email;
-                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + session.user.email + '<br><b>Статус:</b> Активен';
+                const username = currentUser.user_metadata?.username || currentUser.email;
+                document.getElementById('welcome-user').textContent = 'Игрок: ' + username;
+                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Статус:</b> Активен';
             }
         }
 
@@ -144,13 +148,48 @@
             document.getElementById(sectionId).style.display = 'block';
         }
 
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
+        async function openChat() {
+            showSection('chat-section');
+            await loadMessages();
+        }
+
+        async function loadMessages() {
             const box = document.getElementById('chat-messages');
-            if (input.value.trim() !== '') {
-                box.innerHTML += `<div><b>Вы:</b> ${input.value}</div>`;
+            const { data, error } = await supabaseClient
+                .from('messages')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (error) {
+                box.innerHTML = '<div>Ошибка загрузки чата</div>';
+                return;
+            }
+
+            box.innerHTML = '';
+            if (data.length === 0) {
+                box.innerHTML = '<div><b>Система:</b> Пока нет сообщений. Будьте первыми!</div>';
+            } else {
+                data.forEach(msg => {
+                    box.innerHTML += `<div><b>${msg.username}:</b> ${msg.content}</div>`;
+                });
+            }
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text || !currentUser) return;
+
+            const username = currentUser.user_metadata?.username || currentUser.email;
+
+            const { error } = await supabaseClient
+                .from('messages')
+                .insert([{ username: username, content: text }]);
+
+            if (!error) {
                 input.value = '';
-                box.scrollTop = box.scrollHeight;
+                await loadMessages();
             }
         }
 
