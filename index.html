@@ -28,8 +28,8 @@
         <input type="email" id="email" placeholder="Электронная почта">
         <input type="text" id="username" placeholder="Придумайте ник">
         <input type="password" id="password" placeholder="Пароль">
-        <button type="button" class="btn-login" onclick="handleLogin()">Войти</button>
-        <button type="button" class="btn-reg" onclick="handleRegister()">Регистрация</button>
+        <button class="btn-login" onclick="handleLogin()">Войти</button>
+        <button class="btn-reg" onclick="handleRegister()">Регистрация</button>
         <div id="message"></div>
     </div>
 
@@ -37,10 +37,10 @@
     <div class="card section" id="game-hall">
         <h2>Шахматный Зал</h2>
         <p id="welcome-user" style="text-align: center; margin-bottom: 20px;"></p>
-        <button type="button" class="btn-login" onclick="showSection('game-section')">Играть партию</button>
-        <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
-        <button type="button" class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
-        <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
+        <button class="btn-login" onclick="showSection('game-section')">Играть партию</button>
+        <button class="btn-reg" onclick="openChat()">Общий чат</button>
+        <button class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
+        <button class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
     <!-- Раздел игры (Шахматная доска) -->
@@ -51,7 +51,7 @@
             [ Шахматная доска загружена ]<br>
             ♟ ♞ ♝ ♜ ♛ ♚
         </div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
     <!-- Общий чат -->
@@ -60,16 +60,16 @@
         <div class="chat-box" id="chat-messages">
             <div><b>Система:</b> Загрузка сообщений...</div>
         </div>
-        <input type="text" id="chat-input" placeholder="Введите сообщение..." onkeydown="checkEnter(event)">
-        <button type="button" class="btn-login" onclick="sendMessage()">Отправить</button>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+        <input type="text" id="chat-input" placeholder="Введите сообщение...">
+        <button class="btn-login" onclick="sendMessage()">Отправить</button>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
     <!-- Профиль -->
     <div class="card section" id="profile-section">
         <h2>Профиль игрока</h2>
         <p id="profile-info"></p>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
     <script>
@@ -195,12 +195,6 @@
             } else {
                 input.value = '';
                 loadMessages();
-            }
-        }
-
-        function checkEnter(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
             }
         }
 
