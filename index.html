@@ -304,10 +304,9 @@
     </div>
 
     <script>
-        // Инициализация Supabase (ваши данные подключения)
-        const SUPABASE_URL = 'https://ваш-проект.supabase.co'; 
+        // Инициализация Supabase
+        const SUPABASE_URL = 'https://ваш-проект.supabase.co';
         const SUPABASE_ANON_KEY = 'ваш-ключ';
-        
         let supabaseClient = null;
         try {
             if (typeof supabase !== 'undefined') {
@@ -331,7 +330,7 @@
             }
         }
 
-        // Обработка входа и регистрации
+        // Обработка входа
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -363,6 +362,7 @@
             }
         });
 
+        // Обработка регистрации
         document.getElementById('registerBtn').addEventListener('click', async () => {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -381,7 +381,7 @@
                     statusDiv.textContent = 'Ошибка регистрации: ' + error.message;
                 } else {
                     statusDiv.style.color = '#2ecc71';
-                    statusDiv.textContent = 'Регистрация успешна! Проверьте почту или войдите.';
+                    statusDiv.textContent = 'Регистрация успешна! Войдите в систему.';
                 }
             } else {
                 statusDiv.style.color = '#2ecc71';
@@ -389,6 +389,7 @@
             }
         });
 
+        // Кнопка выхода
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             if (supabaseClient) {
                 await supabaseClient.auth.signOut();
