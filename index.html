@@ -18,7 +18,6 @@
         .chat-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
-    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -44,7 +43,7 @@
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
-    <!-- Раздел игры (Шахматная доска) -->
+    <!-- Раздел игры -->
     <div class="card section" id="game-section">
         <h2>Игровая Партия</h2>
         <div style="text-align: center; background: #444; padding: 40px; border-radius: 6px; margin-bottom: 15px;">
@@ -95,9 +94,7 @@
             const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
-                options: {
-                    data: { username: username }
-                }
+                options: { data: { username: username } }
             });
 
             if (error) {
@@ -191,7 +188,6 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // Определяем никнейм: берем из сессии, либо ставим универсальный, если сессия сбросилась
             let username = 'Гость';
             if (currentUser) {
                 username = currentUser.user_metadata?.username || currentUser.email;
@@ -204,7 +200,6 @@
                 ]);
 
             if (error) {
-                console.error('Ошибка отправки:', error);
                 alert('Ошибка отправки: ' + error.message);
             } else {
                 input.value = '';
