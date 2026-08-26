@@ -148,49 +148,39 @@
             document.getElementById(sectionId).style.display = 'block';
         }
 
-        async function openChat() {
+        function openChat() {
             showSection('chat-section');
-            await loadMessages();
+            loadMessages();
         }
 
-        async function loadMessages() {
+        function loadMessages() {
             const box = document.getElementById('chat-messages');
-            const { data, error } = await supabaseClient
-                .from('messages')
-                .select('*')
-                .order('id', { ascending: true });
-
-            if (error) {
-                box.innerHTML = '<div>Ошибка загрузки чата</div>';
-                return;
-            }
+            let messages = JSON.parse(localStorage.getItem('chess_chat_messages')) || [];
 
             box.innerHTML = '';
-            if (data.length === 0) {
+            if (messages.length === 0) {
                 box.innerHTML = '<div><b>Система:</b> Пока нет сообщений. Будьте первыми!</div>';
             } else {
-                data.forEach(msg => {
+                messages.forEach(msg => {
                     box.innerHTML += `<div><b>${msg.username}:</b> ${msg.content}</div>`;
                 });
             }
             box.scrollTop = box.scrollHeight;
         }
 
-        async function sendMessage() {
+        function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text || !currentUser) return;
 
             const username = currentUser.user_metadata?.username || currentUser.email;
+            let messages = JSON.parse(localStorage.getItem('chess_chat_messages')) || [];
+            
+            messages.push({ username: username, content: text });
+            localStorage.setItem('chess_chat_messages', JSON.stringify(messages));
 
-            const { error } = await supabaseClient
-                .from('messages')
-                .insert([{ username: username, content: text }]);
-
-            if (!error) {
-                input.value = '';
-                await loadMessages();
-            }
+            input.value = '';
+            loadMessages();
         }
 
         window.onload = () => {
