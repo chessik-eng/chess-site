@@ -16,8 +16,11 @@
         #message { text-align: center; font-size: 14px; margin-top: 10px; }
         .section { display: none; }
         .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
+        .player-link { color: #64B5F6; cursor: pointer; text-decoration: underline; }
+        .player-link:hover { color: #90CAF9; }
     </style>
     <!-- Подключаем библиотеку Supabase -->
+    <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.5npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -41,7 +44,7 @@
         <button type="button" class="btn-login" onclick="showSection('game-section')">Играть партию</button>
         <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
         <button type="button" class="btn-reg" onclick="openPlayers()">Игроки</button>
-        <button type="button" class="btn-reg" onclick="showSection('profile-section')">Профиль</button>
+        <button type="button" class="btn-reg" onclick="openMyProfile()">Профиль</button>
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
@@ -150,16 +153,30 @@
                 currentUser = session.user;
                 showSection('game-hall');
                 const username = currentUser.user_metadata?.username || currentUser.email;
-                
-                // Определяем звание для профиля
-                let role = 'Обычный игрок';
-                if (username.toLowerCase() === 'шахматный клуб') {
-                    role = 'Создатель сайта ⚙️';
-                }
-
                 document.getElementById('welcome-user').textContent = 'Игрок: ' + username;
-                document.getElementById('profile-info').innerHTML = '<b>Email:</b> ' + currentUser.email + '<br><b>Ник:</b> ' + username + '<br><b>Звание:</b> ' + role + '<br><b>Статус:</b> Активен';
             }
+        }
+
+        function openMyProfile() {
+            if (currentUser) {
+                const username = currentUser.user_metadata?.username || currentUser.email;
+                showUserProfile(username, currentUser.email);
+            }
+        }
+
+        function showUserProfile(username, emailInfo = 'Скрыт (необходим доступ)') {
+            showSection('profile-section');
+            let role = 'Обычный игрок';
+            if (username.toLowerCase() === 'шахматный клуб') {
+                role = 'Создатель сайта ⚙️';
+            }
+
+            document.getElementById('profile-info').innerHTML = `
+                <b>Ник:</b> ${username}<br>
+                <b>Email:</b> ${emailInfo}<br>
+                <b>Звание:</b> ${role}<br>
+                <b>Статус:</b> В сети
+            `;
         }
 
         async function handleLogout() {
@@ -226,13 +243,15 @@
                 const names = [...new Set(data.map(i => i.username))];
                 names.forEach(name => {
                     const playerName = name || 'Гость';
-                    // Проверяем, является ли игрок создателем сайта
                     let roleBadge = '<span style="color: #aaa; font-size: 12px;">(Обычный игрок)</span>';
                     if (playerName.toLowerCase() === 'шахматный клуб') {
                         roleBadge = '<span style="color: #FFD700; font-size: 12px;">(Создатель сайта ⚙️)</span>';
                     }
 
-                    box.innerHTML += `<div style="margin-bottom: 6px;"><b>${playerName}</b> ${roleBadge} — <span style="color: #4CAF50;">🟢 В сети</span></div>`;
+                    box.innerHTML += `<div style="margin-bottom: 6px;">
+                        <span class="player-link" onclick="showUserProfile('${playerName}')"><b>${playerName}</b></span> 
+                        ${roleBadge} — <span style="color: #4CAF50;">🟢 В сети</span>
+                    </div>`;
                 });
             }
         }
