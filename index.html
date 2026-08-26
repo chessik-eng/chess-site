@@ -336,7 +336,7 @@
             return totalEvaluation;
         }
 
-        // Умная сортировка ходов для быстрого отсечения лишних веток
+        // Умная сортировка ходов (сначала взятия)
         function getSortedMoves() {
             let moves = game.ugly_moves({ verbose: true });
             return moves.sort((a, b) => {
@@ -391,7 +391,7 @@
             if (currentBotDifficulty === 'medium') {
                 depth = 3; // Средний (~1500)
             } else if (currentBotDifficulty === 'hard') {
-                depth = 5; // Сложный (~2000) на 5 ходов с быстрой оптимизацией
+                depth = 4; // Сложный (~2000) — снижена глубина до 4 для быстрого ответа
             }
 
             let bestValue = -99999;
