@@ -257,7 +257,10 @@
 
         function openGameSection() {
             showSection('game-section');
-            resetGameMenu();
+            // Сбрасываем меню в начальное состояние (выбор цвета) при каждом открытии
+            document.getElementById('step-color').style.display = 'block';
+            document.getElementById('step-difficulty').style.display = 'none';
+            document.getElementById('chessboard').style.display = 'none';
         }
 
         function resetGameMenu() {
@@ -295,7 +298,6 @@
 
             renderBoard();
 
-            // Если игрок выбрал чёрные, бот делает первый ход за белых
             if (playerColor === 'black') {
                 window.setTimeout(makeBotMove, 200);
             }
@@ -306,7 +308,6 @@
             boardEl.innerHTML = '';
             const boardData = game.board();
 
-            // Если играем за чёрных, переворачиваем доску (от h до a, от 1 до 8)
             let rStart = 0, rEnd = 8, rStep = 1;
             let cStart = 0, cEnd = 8, cStep = 1;
 
@@ -349,7 +350,6 @@
         function onSquareClick(square) {
             if (game.game_over()) return;
 
-            // Проверка, чей сейчас ход (нельзя ходить за чужой цвет)
             let turn = game.turn() === 'w' ? 'white' : 'black';
             if (turn !== playerColor) return;
 
