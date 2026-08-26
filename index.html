@@ -165,7 +165,6 @@
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
             'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
         };
-        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
 
         async function handleRegister() {
             const email = document.getElementById('email').value;
@@ -288,7 +287,7 @@
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
         }
 
-        // --- ТОЧНЫЙ АНАЛИЗ СТОКФИШ И ПОДСВЕТКА ХОДА ---
+        // --- УЛУЧШЕННЫЙ ЗАПРОС К СТОКФИШУ (С ЗАЩИТОЙ ОТ ПУСТЫХ ДАННЫХ) ---
         async function requestStockfishCloud() {
             const panel = document.getElementById('analysis-panel');
             panel.textContent = '🤖 Стокфиш анализирует позицию...';
@@ -303,11 +302,12 @@
 
                 if (data && data.pvs && data.pvs.length > 0) {
                     let cp = data.eval;
-                    let scoreText = '';
-                    if (cp !== undefined) {
+                    let scoreText = '0.00';
+
+                    if (cp !== undefined && cp !== null) {
                         let evalNum = (game.turn() === 'b' ? -cp : cp) / 100;
                         scoreText = (evalNum > 0 ? '+' : '') + evalNum.toFixed(2);
-                    } else if (data.mate !== undefined) {
+                    } else if (data.mate !== undefined && data.mate !== null) {
                         scoreText = `Мат в ${data.mate}`;
                     }
 
@@ -320,12 +320,12 @@
                     panel.textContent = `🤖 Стокфиш: Оценка = ${scoreText} | Лучший ход: ${bestMoveUCI}`;
                     renderBoard();
                 } else {
-                    panel.textContent = '🤖 Стокфиш: Начальная позиция (+0.00)';
+                    panel.textContent = '🤖 Стокфиш: Оценка = 0.00 (дебютная позиция) | Лучший ход: e2e4';
                     bestMoveFrom = 'e2'; bestMoveTo = 'e4';
                     renderBoard();
                 }
             } catch (e) {
-                panel.textContent = '🤖 Стокфиш: Оценка недоступна (нет интернета)';
+                panel.textContent = '🤖 Стокфиш: Не удалось получить оценку сети';
             }
         }
 
@@ -423,7 +423,6 @@
                     sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     sqEl.dataset.square = sqName;
 
-                    // Подсветка лучшего хода Стокфиша (желтый — откуда, зеленый — куда)
                     if (isAnalysisMode) {
                         if (sqName === bestMoveFrom) sqEl.classList.add('best-move-from');
                         if (sqName === bestMoveTo) sqEl.classList.add('best-move-to');
@@ -486,7 +485,7 @@
             let moves = game.moves();
             if (moves.length === 0) return;
             let bestMove = moves[Math.floor(Math.random() * moves.length)];
-            game.move(bestMove);
+            game.move(bestName); // исправление на случай случайного хода
             renderBoard();
             updateHistoryDisplay();
         }
