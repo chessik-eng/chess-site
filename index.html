@@ -249,7 +249,10 @@
 
         function openChat() { showSection('chat-section'); loadMessages(); }
         function openPlayers() { showSection('players-section'); loadPlayers(); }
-        function openOnlineMenu() { showSection('online-menu-section'); }
+        function openOnlineMenu() { 
+            game.reset(); // Сбрасываем доску перед созданием/выбором онлайн игры
+            showSection('online-menu-section'); 
+        }
         function openOnlineLobby() { showSection('online-section'); loadOnlineRooms(); }
 
         function openAnalysisMode() {
@@ -278,6 +281,7 @@
         function openGameSection() {
             isOnlineGame = false;
             isAnalysisMode = false;
+            game.reset(); // Сбрасываем доску для игры с ботом
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
@@ -296,6 +300,7 @@
             isOnlineGame = false;
             isAnalysisMode = false;
             activeRoomId = null;
+            game.reset(); // Сбрасываем доску при возврате в зал
             showSection('game-hall');
         }
 
@@ -327,7 +332,6 @@
             if (!isAnalysisMode) return;
             const panel = document.getElementById('analysis-panel');
             
-            // Если игра уже завершена матом, сразу пишем мат без запросов к сети
             if (game.in_checkmate()) {
                 let winner = game.turn() === 'w' ? 'Черные поставили мат' : 'Белые поставили мат';
                 panel.textContent = `🤖 Стокфиш: Мат! (${winner})`;
@@ -414,7 +418,7 @@
                 }
                 let username = currentUser.user_metadata?.username || 'Игрок';
 
-                // Удаляем старые незавершенные комнаты этого хоста, чтобы они не пересекались
+                game.reset(); // Гарантированно сбрасываем доску в начальное положение для онлайн-игры
                 await supabaseClient.from('rooms').delete().eq('host', username).eq('status', 'waiting');
 
                 let { data, error } = await supabaseClient
@@ -443,7 +447,8 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет свободных игр.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${r.host} (${r.host_color === 'white' ? 'Белые' : 'Черные'})</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
+                let colorText = r.host_color === 'white' ? 'Белые' : (r.host_color === 'black' ? 'Черные' : 'Случайный');
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><span>${r.host} (${colorText})</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
             });
         }
 
