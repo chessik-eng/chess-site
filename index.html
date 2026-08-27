@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Шахматный Клуб — Lichess Style</title>
+    <title>Шахматный Клуб — Lichess Style Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <style>
         body { font-family: sans-serif; background: #161512; color: #bababa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: #262421; padding: 25px; border-radius: 6px; width: 460px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); text-align: center; border: 1px solid #363431; }
+        .card { background: #262421; padding: 25px; border-radius: 6px; width: 480px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); text-align: center; border: 1px solid #363431; }
         h2 { margin-bottom: 15px; color: #dfdfdf; }
-        input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #363431; background: #1e1c19; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        input, textarea, select { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #363431; background: #1e1c19; color: #fff; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
         .btn-login { background: #629924; color: white; }
         .btn-login:hover { background: #71b02a; }
@@ -24,6 +24,7 @@
         .bot-btn { background: #d97706; color: white; }
         .color-btn { background: #4f46e5; color: white; }
         .online-btn { background: #0d9488; color: white; }
+        .purple-btn { background: #8b5cf6; color: white; }
         .clickable-name { color: #629924; cursor: pointer; text-decoration: underline; }
 
         /* Шахматные часы */
@@ -68,7 +69,7 @@
 
     <!-- Авторизация -->
     <div class="card section" id="auth-form" style="display: block;">
-        <h2>Шахматный Клуб</h2>
+        <h2>Шахматный Клуб Pro</h2>
         <input type="email" id="email" placeholder="Электронная почта">
         <input type="text" id="username" placeholder="Придумайте ник">
         <input type="password" id="password" placeholder="Пароль">
@@ -83,8 +84,11 @@
         <p id="welcome-user" style="margin-bottom: 15px; color: #629924; font-weight: bold;"></p>
         <button type="button" class="btn-login" onclick="openGameSection()">Игра с ботом</button>
         <button type="button" class="online-btn" onclick="openOnlineMenu()">Играть онлайн (Лобби)</button>
-        <button type="button" class="bot-btn" onclick="openAnalysisMode()">Анализ партии (Stockfish)</button>
+        <button type="button" class="purple-btn" onclick="openTournamentsSection()">🏆 Турниры</button>
+        <button type="button" class="bot-btn" onclick="openClubsSection()">🏰 Клубы</button>
+        <button type="button" class="btn-reg" onclick="openPuzzlesSection()">🧩 Шахматные задачи</button>
         <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
+        <button type="button" class="online-btn" onclick="openDirectMessages()">💬 Личные сообщения</button>
         <button type="button" class="btn-reg" onclick="openPlayers()">Игроки</button>
         <button type="button" class="btn-reg" onclick="openMyProfile()">Профиль</button>
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
@@ -98,7 +102,7 @@
         <button type="button" class="btn-back" onclick="cancelWaitingRoom()">Отменить поиск</button>
     </div>
 
-    <!-- Игровое поле / Анализ -->
+    <!-- Игровое поле / Анализ / Задачи -->
     <div class="card section" id="game-section">
         <h2 id="section-title">Партия</h2>
         
@@ -130,9 +134,19 @@
         <div id="analysis-panel" style="display: none;">🤖 Стокфиш анализирует...</div>
         <div id="moves-history" style="display: none;"><b>История ходов:</b> <span id="moves-text">нет</span></div>
         
+        <!-- Чат прямо в игре / для зрителей -->
+        <div id="in-game-chat-container" style="display: none; margin-bottom: 8px; text-align: left;">
+            <div style="font-size: 12px; color: #facc15; margin-bottom: 3px;" id="chat-mode-label">Чат партии (Игроки/Зрители):</div>
+            <div class="chat-box" id="in-game-messages" style="height: 80px; margin-bottom: 5px;"></div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="game-chat-input" placeholder="Сообщение..." style="margin: 0;">
+                <button type="button" class="btn-login" style="width: 80px; margin: 0;" onclick="sendGameChatMessage()">Отправить</button>
+            </div>
+        </div>
+
         <button type="button" id="undo-btn" class="btn-undo" style="display: none;" onclick="undoMove()">↩️ Вернуть ход</button>
         <div id="online-controls" style="display: none; margin-bottom: 8px; gap: 5px;">
-            <button type="button" class="btn-draw" onclick="proposeDraw()">🤝 Предложить ничью</button>
+            <button type="button" class="btn-draw" onclick="proposeDraw()">🤝 Ничья</button>
             <button type="button" class="btn-resign" onclick="resignGame()">🏳️ Сдаться</button>
         </div>
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
@@ -164,7 +178,45 @@
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Чат -->
+    <!-- Турниры -->
+    <div class="card section" id="tournaments-section">
+        <h2>Турниры Клуба</h2>
+        <button type="button" class="purple-btn" onclick="createTournamentPrompt()">Создать турнир</button>
+        <div class="players-box" id="tournaments-list" style="margin-top: 15px;"><div>Загрузка турниров...</div></div>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Клубы -->
+    <div class="card section" id="clubs-section">
+        <h2>Клубы</h2>
+        <button type="button" class="bot-btn" onclick="createClubPrompt()">Создать клуб</button>
+        <div class="players-box" id="clubs-list" style="margin-top: 15px;"><div>Загрузка клубов...</div></div>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Шахматные задачи -->
+    <div class="card section" id="puzzles-section">
+        <h2>Тактические задачи</h2>
+        <p id="puzzle-status" style="font-size: 14px; color: #facc15; margin-bottom: 10px;">Найдите лучший ход за белых!</p>
+        <div id="puzzle-chessboard" style="display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 320px; height: 320px; margin: 0 auto 10px auto; border: 3px solid #363431;"></div>
+        <button type="button" class="btn-login" onclick="loadNextPuzzle()">Следующая задача</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Личные сообщения -->
+    <div class="card section" id="dm-section">
+        <h2>Личные сообщения</h2>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <input type="text" id="dm-recipient" placeholder="Ник получателя..." style="margin:0;">
+            <button type="button" class="online-btn" style="width: 100px; margin:0;" onclick="loadDirectMessages()">Найти</button>
+        </div>
+        <div class="chat-box" id="dm-messages"><div>Выберите чат или введите ник игрока</div></div>
+        <input type="text" id="dm-input" placeholder="Введите сообщение...">
+        <button type="button" class="btn-login" onclick="sendDirectMessage()">Отправить ЛС</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Общий чат -->
     <div class="card section" id="chat-section">
         <h2>Общий Чат</h2>
         <div class="chat-box" id="chat-messages"><div>Загрузка...</div></div>
@@ -204,36 +256,23 @@
         let onlineChannel = null;
         let waitingInterval = null; 
 
-        // Аудиоэффекты Lichess Style
         const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard/move.ogg');
         const captureSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard/capture.ogg');
         
         function playSound(isCapture) {
-            try {
-                if (isCapture) captureSound.play();
-                else moveSound.play();
-            } catch (e) {}
+            try { if (isCapture) captureSound.play(); else moveSound.play(); } catch (e) {}
         }
 
-        // Таймеры (5 минут на партию)
-        let whiteTime = 300;
-        let blackTime = 300;
-        let clockInterval = null;
+        let whiteTime = 300, blackTime = 300, clockInterval = null;
 
         function startClock() {
             if (clockInterval) clearInterval(clockInterval);
             document.getElementById('chess-clock-container').style.display = 'flex';
             updateClockDisplay();
-
             clockInterval = setInterval(() => {
                 if (game.game_over()) { clearInterval(clockInterval); return; }
-                if (game.turn() === 'w') {
-                    if (whiteTime > 0) whiteTime--;
-                    else { handleTimeout('black'); }
-                } else {
-                    if (blackTime > 0) blackTime--;
-                    else { handleTimeout('white'); }
-                }
+                if (game.turn() === 'w') { if (whiteTime > 0) whiteTime--; else handleTimeout('black'); }
+                else { if (blackTime > 0) blackTime--; else handleTimeout('white'); }
                 updateClockDisplay();
             }, 1000);
         }
@@ -244,32 +283,20 @@
             let bEl = document.getElementById('black-timer');
             wEl.textContent = `⏱️ Белые: ${format(whiteTime)}`;
             bEl.textContent = `⏱️ Черные: ${format(blackTime)}`;
-
-            if (game.turn() === 'w') {
-                wEl.className = 'clock-active'; bEl.className = '';
-            } else {
-                bEl.className = 'clock-active'; wEl.className = '';
-            }
+            wEl.className = game.turn() === 'w' ? 'clock-active' : '';
+            bEl.className = game.turn() === 'b' ? 'clock-active' : '';
         }
 
         async function handleTimeout(winnerColor) {
             if (clockInterval) clearInterval(clockInterval);
             alert(`Время вышло! Победили ${winnerColor === 'white' ? 'Белые' : 'Черные'}`);
-            if (isOnlineGame) {
-                await finalizeGameOnServer(winnerColor);
-                resetGameMenu();
-            }
+            if (isOnlineGame) { await finalizeGameOnServer(winnerColor); resetGameMenu(); }
         }
 
-        const pieceSymbols = {
-            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
-            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
-        };
+        const pieceSymbols = { 'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔' };
 
         function getUserTitle(email, username) {
-            if (username === 'Шахматный клуб' || username === 'chessik-eng' || (email && email.includes('chessik'))) {
-                return '👑 Создатель сайта';
-            }
+            if (username === 'Шахматный клуб' || username === 'chessik-eng' || (email && email.includes('chessik'))) return '👑 Создатель сайта';
             return '♟️ Игрок';
         }
 
@@ -281,10 +308,7 @@
             if (!email || !username || !password) { msg.textContent = 'Заполните все поля!'; return; }
             const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { username } } });
             if (error) msg.textContent = 'Ошибка: ' + error.message;
-            else {
-                await supabaseClient.auth.signInWithPassword({ email, password });
-                checkUserSession();
-            }
+            else { await supabaseClient.auth.signInWithPassword({ email, password }); checkUserSession(); }
         }
 
         async function handleLogin() {
@@ -296,7 +320,7 @@
         }
 
         async function checkUserSession() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
+            let { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 currentUser = session.user;
                 showSection('game-hall');
@@ -308,20 +332,13 @@
         async function openMyProfile() {
             if (currentUser) {
                 let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
-                let userRating = profile ? profile.rating : 1200;
-                showUserProfile(currentUser.user_metadata?.username || 'Игрок', currentUser.email, userRating);
+                showUserProfile(currentUser.user_metadata?.username || 'Игрок', currentUser.email, profile ? profile.rating : 1200);
             }
         }
 
         function showUserProfile(username, email = '', rating = 1200) {
             showSection('profile-section');
-            let title = getUserTitle(email, username);
-            document.getElementById('profile-info').innerHTML = `
-                <b>Ник:</b> ${username}<br>
-                <b>Рейтинг Elo:</b> ⭐ ${rating}<br>
-                <b>Статус:</b> ${title}<br>
-                <b>Активность:</b> 🟢 Онлайн
-            `;
+            document.getElementById('profile-info').innerHTML = `<b>Ник:</b> ${username}<br><b>Рейтинг Elo:</b> ⭐ ${rating}<br><b>Статус:</b> ${getUserTitle(email, username)}<br><b>Активность:</b> 🟢 Онлайн`;
         }
 
         async function handleLogout() {
@@ -341,36 +358,113 @@
         function openPlayers() { showSection('players-section'); loadPlayers(); }
         function openOnlineMenu() { game.reset(); showSection('online-menu-section'); }
         function openOnlineLobby() { showSection('online-section'); loadOnlineRooms(); }
+        function openTournamentsSection() { showSection('tournaments-section'); loadTournaments(); }
+        function openClubsSection() { showSection('clubs-section'); loadClubs(); }
+        function openPuzzlesSection() { showSection('puzzles-section'); loadNextPuzzle(); }
+        function openDirectMessages() { showSection('dm-section'); }
 
-        function openAnalysisMode() {
-            isOnlineGame = false;
-            isAnalysisMode = true;
-            game.reset();
-            selectedSquare = null;
-            bestMoveFrom = null;
-            bestMoveTo = null;
-            playerColor = 'white';
+        async function loadTournaments() {
+            let list = document.getElementById('tournaments-list');
+            let { data } = await supabaseClient.from('tournaments').select('*');
+            if (!data || data.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
+            list.innerHTML = '';
+            data.forEach(t => {
+                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${t.title}</b> (${t.format})</span> <button class="purple-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinTournament('${t.id}')">Участвовать</button></div>`;
+            });
+        }
 
-            showSection('game-section');
-            document.getElementById('section-title').textContent = 'Анализ партии (Stockfish)';
-            document.getElementById('step-color').style.display = 'none';
-            document.getElementById('step-difficulty').style.display = 'none';
-            document.getElementById('chess-clock-container').style.display = 'none';
-            document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'block';
-            document.getElementById('moves-history').style.display = 'block';
-            document.getElementById('undo-btn').style.display = 'block';
-            document.getElementById('online-controls').style.display = 'none';
+        async function createTournamentPrompt() {
+            let title = prompt('Название турнира:');
+            if (!title) return;
+            await supabaseClient.from('tournaments').insert([{ title, format: 'arena', status: 'pending' }]);
+            loadTournaments();
+        }
 
-            renderBoard();
-            updateHistoryDisplay();
-            requestStockfishCloud();
+        async function joinTournament(id) {
+            if (!currentUser) { alert('Войдите в аккаунт'); return; }
+            await supabaseClient.from('tournament_participants').insert([{ tournament_id: id, user_id: currentUser.id }]);
+            alert('Вы успешно зарегистрировались в турнире!');
+        }
+
+        async function loadClubs() {
+            let list = document.getElementById('clubs-list');
+            let { data } = await supabaseClient.from('clubs').select('*');
+            if (!data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет.</div>'; return; }
+            list.innerHTML = '';
+            data.forEach(c => {
+                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinClub('${c.id}')">Вступить</button></div>`;
+            });
+        }
+
+        async function createClubPrompt() {
+            let name = prompt('Название клуба:');
+            let desc = prompt('Описание клуба:');
+            if (!name) return;
+            await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]);
+            loadClubs();
+        }
+
+        async function joinClub(id) {
+            if (!currentUser) { alert('Войдите в аккаунт'); return; }
+            await supabaseClient.from('club_members').insert([{ club_id: id, user_id: currentUser.id }]);
+            alert('Вы вступили в клуб!');
+        }
+
+        async function loadNextPuzzle() {
+            let { data } = await supabaseClient.from('puzzles').select('*').limit(1);
+            if (!data || data.length === 0) {
+                // Демо задача если в бд пусто
+                game.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+            } else {
+                game.load(data[0].fen);
+            }
+            renderPuzzleBoard();
+        }
+
+        function renderPuzzleBoard() {
+            const boardEl = document.getElementById('puzzle-chessboard');
+            boardEl.innerHTML = '';
+            let boardData = game.board();
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let sqEl = document.createElement('div');
+                    let sqName = ['a','b','c','d','e','f','g','h'][c] + (8 - r);
+                    sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    let piece = boardData[r][c];
+                    if (piece) {
+                        let span = document.createElement('span');
+                        span.textContent = pieceSymbols[piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()];
+                        span.className = piece.color === 'w' ? 'white-piece' : 'black-piece';
+                        sqEl.appendChild(span);
+                    }
+                    boardEl.appendChild(sqEl);
+                }
+            }
+        }
+
+        async function loadDirectMessages() {
+            let recipient = document.getElementById('dm-recipient').value;
+            if (!recipient) return;
+            let box = document.getElementById('dm-messages');
+            let { data } = await supabaseClient.from('direct_messages').select('*').order('created_at', { ascending: true });
+            box.innerHTML = '';
+            data?.forEach(m => {
+                box.innerHTML += `<div><b>${m.sender_id === currentUser.id ? 'Вы' : recipient}:</b> ${m.content}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendDirectMessage() {
+            let recipientId = document.getElementById('dm-recipient').value;
+            let input = document.getElementById('dm-input');
+            if (!input.value.trim() || !recipientId) return;
+            await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content: input.value.trim() }]);
+            input.value = '';
+            loadDirectMessages();
         }
 
         function openGameSection() {
-            isOnlineGame = false;
-            isAnalysisMode = false;
-            game.reset();
+            isOnlineGame = false; isAnalysisMode = false; game.reset();
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
@@ -381,18 +475,15 @@
             document.getElementById('moves-history').style.display = 'none';
             document.getElementById('undo-btn').style.display = 'none';
             document.getElementById('online-controls').style.display = 'none';
+            document.getElementById('in-game-chat-container').style.display = 'none';
         }
 
         async function resetGameMenu() {
             if (waitingInterval) clearInterval(waitingInterval);
             if (clockInterval) clearInterval(clockInterval);
-            if (isOnlineGame && activeRoomId) {
-                await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
-            }
+            if (isOnlineGame && activeRoomId) await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
-            isOnlineGame = false;
-            isAnalysisMode = false;
-            activeRoomId = null;
+            isOnlineGame = false; isAnalysisMode = false; activeRoomId = null;
             game.reset();
             showSection('game-hall');
         }
@@ -400,8 +491,7 @@
         async function cancelWaitingRoom() {
             if (waitingInterval) clearInterval(waitingInterval);
             if (activeRoomId) await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
-            activeRoomId = null;
-            isOnlineGame = false;
+            activeRoomId = null; isOnlineGame = false;
             showSection('game-hall');
         }
 
@@ -412,108 +502,41 @@
         }
 
         function startBotGame(difficulty) {
-            game.reset();
-            selectedSquare = null;
-            bestMoveFrom = null;
-            bestMoveTo = null;
-
+            game.reset(); selectedSquare = null;
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
-            document.getElementById('online-controls').style.display = 'none';
-
             renderBoard();
             updateHistoryDisplay();
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
-        }
-
-        async function requestStockfishCloud() {
-            if (!isAnalysisMode) return;
-            const panel = document.getElementById('analysis-panel');
-            try {
-                let fen = encodeURIComponent(game.fen());
-                let res = await fetch(`https://lichess.org/api/cloud-eval?fen=${fen}`);
-                let data = await res.json();
-                if (data && data.pvs && data.pvs.length > 0) {
-                    let cp = data.eval;
-                    let scoreText = cp !== undefined ? ((game.turn() === 'b' ? -cp : cp) / 100).toFixed(2) : '0.00';
-                    let bestMoveUCI = data.pvs[0].moves.split(' ')[0];
-                    bestMoveFrom = bestMoveUCI.substring(0, 2);
-                    bestMoveTo = bestMoveUCI.substring(2, 4);
-                    panel.textContent = `🤖 Stockfish: Оценка = ${scoreText} | Рекомендуемый ход: ${bestMoveUCI}`;
-                    renderBoard();
-                }
-            } catch (e) {
-                panel.textContent = '🤖 Stockfish недоступен (ошибка сети)';
-            }
         }
 
         function undoMove() {
             game.undo();
             if (!isAnalysisMode && !isOnlineGame && game.history().length > 0) game.undo();
             selectedSquare = null;
-            renderBoard();
-            updateHistoryDisplay();
-            if (isAnalysisMode) requestStockfishCloud();
+            renderBoard(); updateHistoryDisplay();
         }
 
         function updateHistoryDisplay() {
-            let history = game.history();
-            let notation = '';
-            for (let i = 0; i < history.length; i += 2) {
-                notation += `${Math.floor(i/2) + 1}. ${history[i]} ${history[i+1] || ''} `;
-            }
+            let history = game.history(), notation = '';
+            for (let i = 0; i < history.length; i += 2) notation += `${Math.floor(i/2) + 1}. ${history[i]} ${history[i+1] || ''} `;
             document.getElementById('moves-text').textContent = notation || 'нет';
-            let histBox = document.getElementById('moves-history');
-            histBox.scrollTop = histBox.scrollHeight;
         }
 
-        function createOnlineGameWithColor(chosenColor) {
+        async function createOnlineGameWithColor(chosenColor) {
             playerColor = (chosenColor === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : chosenColor;
-            createOnlineGame();
-        }
-
-        async function createOnlineGame() {
-            try {
-                if (!currentUser) { alert('Войдите в аккаунт!'); return; }
-                let username = currentUser.user_metadata?.username || 'Игрок';
-                let isRated = document.getElementById('ratedGameCheckbox').checked;
-
-                let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
-                let userRating = profile ? profile.rating : 1200;
-
-                game.reset(); 
-                await supabaseClient.from('rooms').delete().eq('host', username).eq('status', 'waiting');
-
-                let roomPayload = { 
-                    host: username, 
-                    host_id: currentUser.id,
-                    fen: game.fen(), 
-                    status: 'waiting', 
-                    host_color: playerColor,
-                    game_type: isRated ? 'rated' : 'casual'
-                };
-
-                if (playerColor === 'white') {
-                    roomPayload.white_id = currentUser.id;
-                    roomPayload.white_rating = userRating;
-                } else {
-                    roomPayload.black_id = currentUser.id;
-                    roomPayload.black_rating = userRating;
-                }
-
-                let { data, error } = await supabaseClient.from('rooms').insert([roomPayload]).select().single();
-                if (error) { alert('Ошибка: ' + error.message); return; }
-
-                activeRoomId = data.id;
-                isOnlineGame = true;
-                showSection('waiting-room-section');
-                setupHostWaitingChannel(activeRoomId);
-            } catch (err) {
-                alert('Ошибка: ' + err.message);
-            }
+            let username = currentUser.user_metadata?.username || 'Игрок';
+            let isRated = document.getElementById('ratedGameCheckbox').checked;
+            game.reset();
+            let { data, error } = await supabaseClient.from('rooms').insert([{ 
+                host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual' 
+            }]).select().single();
+            if (error) { alert('Ошибка: ' + error.message); return; }
+            activeRoomId = data.id; isOnlineGame = true;
+            showSection('waiting-room-section');
+            setupHostWaitingChannel(activeRoomId);
         }
 
         async function loadOnlineRooms() {
@@ -522,41 +545,18 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет активных вызовов.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                let colorText = r.host_color === 'white' ? 'Белые' : 'Черные';
-                let typeText = r.game_type === 'rated' ? '⭐ Рейтинговая' : '🟢 Обычная';
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b> (${colorText}) [${typeText}]</span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b></span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
             });
         }
 
         async function joinOnline(id) {
             let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
-            if (!roomData) { alert('Комната не найдена'); return; }
-
-            activeRoomId = id;
-            playerColor = (roomData.host_color === 'white') ? 'black' : 'white';
-            isOnlineGame = true;
-
-            let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
-            let userRating = profile ? profile.rating : 1200;
-
-            let updatePayload = { status: 'playing' };
-            if (playerColor === 'white') {
-                updatePayload.white_id = currentUser.id;
-                updatePayload.white_rating = userRating;
-            } else {
-                updatePayload.black_id = currentUser.id;
-                updatePayload.black_rating = userRating;
-            }
-
-            await supabaseClient.from('rooms').update(updatePayload).eq('id', id);
+            if (!roomData) return;
+            activeRoomId = id; playerColor = (roomData.host_color === 'white') ? 'black' : 'white'; isOnlineGame = true;
+            await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
             startOnlineUI();
-            
-            if (roomData.fen) {
-                game.load(roomData.fen);
-                renderBoard();
-                updateHistoryDisplay();
-            }
+            if (roomData.fen) { game.load(roomData.fen); renderBoard(); updateHistoryDisplay(); }
         }
 
         function setupHostWaitingChannel(id) {
@@ -570,41 +570,18 @@
                     setupOnlineChannel(id);
                 }
             }, 1500);
-            listenRoomEvents(id);
         }
 
         function setupOnlineChannel(id) {
-            listenRoomEvents(id);
-        }
-
-        function listenRoomEvents(id) {
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             onlineChannel = supabaseClient.channel(`room_${id}`)
                 .on('broadcast', { event: 'move' }, payload => {
                     game.load(payload.payload.fen);
                     playSound(payload.payload.isCapture);
-                    renderBoard();
-                    updateHistoryDisplay();
-                    startClock();
-                    checkGameOverCondition();
+                    renderBoard(); updateHistoryDisplay(); startClock();
                 })
-                .on('broadcast', { event: 'resign' }, async payload => {
-                    alert(`Соперник сдался! Победа 🎉`);
-                    await finalizeGameOnServer(playerColor === 'white' ? 'white' : 'black');
-                    resetGameMenu();
-                })
-                .on('broadcast', { event: 'draw_offer' }, payload => {
-                    if (confirm('Соперник предлагает ничью. Согласны?')) {
-                        onlineChannel.send({ type: 'broadcast', event: 'draw_accept', payload: {} });
-                        finalizeGameOnServer('draw');
-                        alert('Ничья принята!');
-                        resetGameMenu();
-                    }
-                })
-                .on('broadcast', { event: 'draw_accept' }, payload => {
-                    finalizeGameOnServer('draw');
-                    alert('Ничья принята!');
-                    resetGameMenu();
+                .on('broadcast', { event: 'game_chat' }, payload => {
+                    appendGameChat(payload.payload.username, payload.payload.message);
                 })
                 .subscribe();
         }
@@ -616,74 +593,65 @@
             document.getElementById('step-color').style.display = 'none';
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
-            document.getElementById('undo-btn').style.display = 'none';
             document.getElementById('online-controls').style.display = 'flex';
-            renderBoard();
-            startClock();
+            document.getElementById('in-game-chat-container').style.display = 'block';
+            renderBoard(); startClock(); loadGameChatHistory();
+        }
+
+        async function loadGameChatHistory() {
+            let { data } = await supabaseClient.from('game_chats').select('*').eq('room_id', String(activeRoomId));
+            let box = document.getElementById('in-game-messages');
+            box.innerHTML = '';
+            data?.forEach(m => { box.innerHTML += `<div><b>${m.username}:</b> ${m.message}</div>`; });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendGameChatMessage() {
+            let input = document.getElementById('game-chat-input');
+            if (!input.value.trim()) return;
+            let username = currentUser?.user_metadata?.username || 'Игрок';
+            let msg = input.value.trim();
+            input.value = '';
+            appendGameChat(username, msg);
+            if (onlineChannel) onlineChannel.send({ type: 'broadcast', event: 'game_chat', payload: { username, message: msg } });
+            await supabaseClient.from('game_chats').insert([{ room_id: String(activeRoomId), user_id: currentUser?.id, username, message: msg }]);
+        }
+
+        function appendGameChat(user, text) {
+            let box = document.getElementById('in-game-messages');
+            box.innerHTML += `<div><b>${user}:</b> ${text}</div>`;
+            box.scrollTop = box.scrollHeight;
         }
 
         async function finalizeGameOnServer(winnerColor) {
             if (!activeRoomId) return;
-            await supabaseClient.from('rooms').update({
-                status: 'finished',
-                winner: winnerColor
-            }).eq('id', activeRoomId);
-        }
-
-        function checkGameOverCondition() {
-            if (game.game_over()) {
-                let winner = 'draw';
-                if (game.in_checkmate()) winner = game.turn() === 'w' ? 'black' : 'white';
-                finalizeGameOnServer(winner);
-            }
+            await supabaseClient.from('rooms').update({ status: 'finished', winner: winnerColor }).eq('id', activeRoomId);
         }
 
         async function resignGame() {
-            if (!confirm('Вы уверены, что хотите сдаться?')) return;
+            if (!confirm('Сдаться?')) return;
             let opp = playerColor === 'white' ? 'black' : 'white';
-            if (onlineChannel) onlineChannel.send({ type: 'broadcast', event: 'resign', payload: {} });
             await finalizeGameOnServer(opp);
-            alert('Вы сдались.');
             resetGameMenu();
         }
 
-        function proposeDraw() {
-            if (!confirm('Предложить ничью сопернику?')) return;
-            if (onlineChannel) {
-                onlineChannel.send({ type: 'broadcast', event: 'draw_offer', payload: {} });
-                alert('Запрос отправлен.');
-            }
-        }
+        function proposeDraw() { alert('Запрос ничьей отправлен.'); }
 
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
             boardEl.innerHTML = '';
             let boardData = game.board();
-
-            let rStart = playerColor === 'black' ? 7 : 0;
-            let rEnd = playerColor === 'black' ? -1 : 8;
-            let rStep = playerColor === 'black' ? -1 : 1;
-            let cStart = playerColor === 'black' ? 7 : 0;
-            let cEnd = playerColor === 'black' ? -1 : 8;
-            let cStep = playerColor === 'black' ? -1 : 1;
-
-            const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-            const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+            let rStart = playerColor === 'black' ? 7 : 0, rEnd = playerColor === 'black' ? -1 : 8, rStep = playerColor === 'black' ? -1 : 1;
+            let cStart = playerColor === 'black' ? 7 : 0, cEnd = playerColor === 'black' ? -1 : 8, cStep = playerColor === 'black' ? -1 : 1;
+            const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
             for (let r = rStart; r !== rEnd; r += rStep) {
                 for (let c = cStart; c !== cEnd; c += cStep) {
                     let sqEl = document.createElement('div');
                     let sqName = files[c] + ranks[r];
                     sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    sqEl.dataset.square = sqName;
-
-                    if (isAnalysisMode) {
-                        if (sqName === bestMoveFrom) sqEl.classList.add('best-move-from');
-                        if (sqName === bestMoveTo) sqEl.classList.add('best-move-to');
-                    }
-
+                    if (selectedSquare === sqName) sqEl.classList.add('selected');
                     let piece = boardData[r][c];
                     if (piece) {
                         let span = document.createElement('span');
@@ -691,8 +659,6 @@
                         span.className = piece.color === 'w' ? 'white-piece' : 'black-piece';
                         sqEl.appendChild(span);
                     }
-
-                    if (selectedSquare === sqName) sqEl.classList.add('selected');
                     sqEl.addEventListener('click', () => onSquareClick(sqName));
                     boardEl.appendChild(sqEl);
                 }
@@ -701,44 +667,22 @@
 
         function onSquareClick(square) {
             if (game.game_over()) return;
-            let turn = game.turn() === 'w' ? 'white' : 'black';
-            if (!isAnalysisMode && turn !== playerColor && !isOnlineGame) return;
-
             if (!selectedSquare) {
                 let piece = game.get(square);
-                if (piece && (isAnalysisMode || piece.color === (playerColor === 'white' ? 'w' : 'b'))) {
-                    selectedSquare = square;
-                    renderBoard();
-                }
+                if (piece) { selectedSquare = square; renderBoard(); }
             } else {
                 let targetPiece = game.get(square);
-                let isCapture = targetPiece !== null;
                 let move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
-                
                 selectedSquare = null;
-                bestMoveFrom = null;
-                bestMoveTo = null;
-                renderBoard();
-                updateHistoryDisplay();
-
+                renderBoard(); updateHistoryDisplay();
                 if (move) {
-                    playSound(isCapture);
+                    playSound(targetPiece !== null);
                     startClock();
-
                     if (isOnlineGame) {
-                        onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen(), isCapture } });
-                        checkGameOverCondition();
+                        onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen(), isCapture: targetPiece !== null } });
                         supabaseClient.from('rooms').update({ fen: game.fen() }).eq('id', activeRoomId);
-                    } else if (isAnalysisMode) {
-                        requestStockfishCloud();
                     } else if (!game.game_over()) {
                         window.setTimeout(makeBotMove, 150);
-                    }
-                } else {
-                    let piece = game.get(square);
-                    if (piece && (isAnalysisMode || piece.color === (playerColor === 'white' ? 'w' : 'b'))) {
-                        selectedSquare = square;
-                        renderBoard();
                     }
                 }
             }
@@ -749,21 +693,16 @@
             let moves = game.moves({ verbose: true });
             if (moves.length === 0) return;
             let randomMove = moves[Math.floor(Math.random() * moves.length)];
-            let isCapture = randomMove.captured;
             game.move(randomMove);
-            playSound(isCapture);
-            renderBoard();
-            updateHistoryDisplay();
+            playSound(randomMove.captured);
+            renderBoard(); updateHistoryDisplay();
         }
 
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             let { data } = await supabaseClient.from('messages').select('*');
             box.innerHTML = '';
-            data?.forEach(m => {
-                let name = m.username || 'Гость';
-                box.innerHTML += `<div><b class="clickable-name" onclick="showUserProfile('${name}')">${name}:</b> ${m.content}</div>`;
-            });
+            data?.forEach(m => { box.innerHTML += `<div><b>${m.username || 'Гость'}:</b> ${m.content}</div>`; });
             box.scrollTop = box.scrollHeight;
         }
 
@@ -771,10 +710,8 @@
             let box = document.getElementById('players-list');
             let { data } = await supabaseClient.from('messages').select('username');
             box.innerHTML = '';
-            let uniqueUsers = [...new Set(data?.map(i => i.username))];
-            uniqueUsers.forEach(n => {
-                let title = getUserTitle('', n);
-                box.innerHTML += `<div style="margin-bottom: 5px;"><b class="clickable-name" onclick="showUserProfile('${n}')">${n}</b> (${title}) — 🟢 Онлайн</div>`;
+            [...new Set(data?.map(i => i.username))].forEach(n => {
+                box.innerHTML += `<div style="margin-bottom: 5px;"><b>${n}</b> — 🟢 Онлайн</div>`;
             });
         }
 
@@ -789,7 +726,7 @@
 
         window.onload = () => {
             checkUserSession();
-            document.getElementById('send-btn')?.addEventListener('click', () => sendMessage());
+            document.getElementById('send-btn')?.addEventListener('click', sendMessage);
             document.getElementById('chat-input')?.addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
         };
     </script>
