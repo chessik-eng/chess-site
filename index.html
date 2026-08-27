@@ -21,6 +21,7 @@
         .bot-btn { background: #ff9800; color: white; }
         .color-btn { background: #673AB7; color: white; }
         .online-btn { background: #009688; color: white; }
+        .clickable-name { color: #4CAF50; cursor: pointer; text-decoration: underline; }
 
         /* Шахматная доска */
         #chessboard {
@@ -75,7 +76,7 @@
         <h2>Шахматный Зал</h2>
         <p id="welcome-user" style="margin-bottom: 15px;"></p>
         <button type="button" class="btn-login" onclick="openGameSection()">Игра с ботом</button>
-        <button type="button" class="online-btn" onclick="openOnlineLobby()">Играть онлайн (Лобби)</button>
+        <button type="button" class="online-btn" onclick="openOnlineMenu()">Играть онлайн (Лобби)</button>
         <button type="button" class="bot-btn" onclick="openAnalysisMode()">Анализ партии (Stockfish)</button>
         <button type="button" class="btn-reg" onclick="openChat()">Общий чат</button>
         <button type="button" class="btn-reg" onclick="openPlayers()">Игроки</button>
@@ -113,10 +114,23 @@
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
 
-    <!-- Онлайн лобби -->
+    <!-- Онлайн меню (выбор цвета перед созданием) -->
+    <div class="card section" id="online-menu-section">
+        <h2>Онлайн Игра</h2>
+        <p style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">Выберите цвет для новой игры:</p>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('white')">Белые</button>
+            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('black')">Чёрные</button>
+            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('random')">Случайный</button>
+        </div>
+        <button type="button" class="online-btn" onclick="openOnlineLobby()">Перейти к списку игр</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+    </div>
+
+    <!-- Онлайн лобби (список) -->
     <div class="card section" id="online-section">
         <h2>Онлайн Лобби</h2>
-        <button type="button" class="online-btn" onclick="createOnlineGame()">Создать новую игру</button>
+        <button type="button" class="online-btn" onclick="showSection('online-menu-section')">Создать новую игру</button>
         <div class="players-box" id="online-games-list" style="margin-top: 15px;"><div>Поиск игр...</div></div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
@@ -166,6 +180,13 @@
             'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
         };
 
+        // Функция определения звания по почте или нику (укажите вашу почту создателя)
+        function getUserTitle(email, username) {
+            if (email === 'ваш_email@gmail.com' || username === 'Создатель') return '👑 Создатель сайта';
+            if (email && email.includes('mod')) return '🛡️ Модератор';
+            return '♟️ Обычный игрок';
+        }
+
         async function handleRegister() {
             const email = document.getElementById('email').value;
             const username = document.getElementById('username').value;
@@ -193,16 +214,25 @@
             if (session) {
                 currentUser = session.user;
                 showSection('game-hall');
-                document.getElementById('welcome-user').textContent = 'Игрок: ' + (currentUser.user_metadata?.username || currentUser.email);
+                let name = currentUser.user_metadata?.username || currentUser.email;
+                document.getElementById('welcome-user').textContent = 'Игрок: ' + name;
             }
         }
 
         function openMyProfile() {
             if (currentUser) {
-                let name = currentUser.user_metadata?.username || currentUser.email;
-                showSection('profile-section');
-                document.getElementById('profile-info').innerHTML = `<b>Ник:</b> ${name}<br><b>Статус:</b> В сети`;
+                showUserProfile(currentUser.user_metadata?.username || 'Игрок', currentUser.email);
             }
+        }
+
+        function showUserProfile(username, email) {
+            showSection('profile-section');
+            let title = getUserTitle(email, username);
+            document.getElementById('profile-info').innerHTML = `
+                <b>Ник:</b> ${username}<br>
+                <b>Звание:</b> ${title}<br>
+                <b>Статус:</b> 🟢 В сети
+            `;
         }
 
         async function handleLogout() {
@@ -218,6 +248,7 @@
 
         function openChat() { showSection('chat-section'); loadMessages(); }
         function openPlayers() { showSection('players-section'); loadPlayers(); }
+        function openOnlineMenu() { showSection('online-menu-section'); }
         function openOnlineLobby() { showSection('online-section'); loadOnlineRooms(); }
 
         function openAnalysisMode() {
@@ -347,6 +378,11 @@
             document.getElementById('moves-text').textContent = history.length === 0 ? 'нет' : history.join(' ');
         }
 
+        function createOnlineGameWithColor(chosenColor) {
+            playerColor = (chosenColor === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : chosenColor;
+            createOnlineGame();
+        }
+
         async function createOnlineGame() {
             try {
                 if (!currentUser) {
@@ -366,7 +402,6 @@
                 }
 
                 activeRoomId = data.id;
-                playerColor = 'white';
                 isOnlineGame = true;
                 setupOnlineChannel(activeRoomId);
                 startOnlineUI();
@@ -387,7 +422,7 @@
 
         async function joinOnline(id) {
             activeRoomId = id;
-            playerColor = 'black';
+            playerColor = 'black'; // Присоединившийся играет за черных
             isOnlineGame = true;
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
@@ -510,7 +545,10 @@
             let box = document.getElementById('chat-messages');
             let { data } = await supabaseClient.from('messages').select('*');
             box.innerHTML = '';
-            data?.forEach(m => box.innerHTML += `<div><b>${m.username || 'Гость'}:</b> ${m.content}</div>`);
+            data?.forEach(m => {
+                let name = m.username || 'Гость';
+                box.innerHTML += `<div><b class="clickable-name" onclick="showUserProfile('${name}')">${name}:</b> ${m.content}</div>`;
+            });
             box.scrollTop = box.scrollHeight;
         }
 
@@ -518,7 +556,11 @@
             let box = document.getElementById('players-list');
             let { data } = await supabaseClient.from('messages').select('username');
             box.innerHTML = '';
-            [...new Set(data?.map(i => i.username))].forEach(n => box.innerHTML += `<div><b>${n}</b> — 🟢 В сети</div>`);
+            let uniqueUsers = [...new Set(data?.map(i => i.username))];
+            uniqueUsers.forEach(n => {
+                let title = getUserTitle('', n);
+                box.innerHTML += `<div style="margin-bottom: 5px;"><b class="clickable-name" onclick="showUserProfile('${n}')">${n}</b> (${title}) — 🟢 В сети</div>`;
+            });
         }
 
         async function sendMessage() {
