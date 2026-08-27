@@ -25,14 +25,13 @@
         .color-btn { background: #4f46e5; color: white; }
         .online-btn { background: #0d9488; color: white; }
         .purple-btn { background: #8b5cf6; color: white; }
-        .clickable-name { color: #629924; cursor: pointer; text-decoration: underline; }
 
         /* Шахматные часы */
         .chess-clock { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; background: #1e1c19; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #363431; }
         .clock-active { color: #629924; text-shadow: 0 0 8px rgba(98, 153, 36, 0.4); }
 
         /* Шахматная доска */
-        #chessboard {
+        .chessboard-grid {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
@@ -57,8 +56,6 @@
         .white-piece { color: #f0f0f0; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
         .black-piece { color: #222222; text-shadow: 0 1px 2px rgba(255,255,255,0.3); }
         .square.selected { background: #bbc953 !important; }
-        .square.best-move-from { background: #facc15 !important; }
-        .square.best-move-to { background: #4ade80 !important; }
 
         #analysis-panel { background: #1e1c19; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; color: #4ade80; text-align: left; border: 1px solid #363431; }
         #moves-history { background: #1e1c19; height: 70px; border-radius: 4px; padding: 8px; overflow-y: auto; font-size: 13px; text-align: left; margin-bottom: 8px; color: #dfdfdf; border: 1px solid #363431; }
@@ -102,7 +99,7 @@
         <button type="button" class="btn-back" onclick="cancelWaitingRoom()">Отменить поиск</button>
     </div>
 
-    <!-- Игровое поле / Анализ / Задачи -->
+    <!-- Игровое поле / Бот -->
     <div class="card section" id="game-section">
         <h2 id="section-title">Партия</h2>
         
@@ -130,13 +127,12 @@
             <span id="black-timer">⏱️ Черные: 05:00</span>
         </div>
 
-        <div id="chessboard" style="display: none;"></div>
-        <div id="analysis-panel" style="display: none;">🤖 Стокфиш анализирует...</div>
+        <div id="chessboard" class="chessboard-grid" style="display: none;"></div>
         <div id="moves-history" style="display: none;"><b>История ходов:</b> <span id="moves-text">нет</span></div>
         
-        <!-- Чат прямо в игре / для зрителей -->
+        <!-- Чат в игре -->
         <div id="in-game-chat-container" style="display: none; margin-bottom: 8px; text-align: left;">
-            <div style="font-size: 12px; color: #facc15; margin-bottom: 3px;" id="chat-mode-label">Чат партии (Игроки/Зрители):</div>
+            <div style="font-size: 12px; color: #facc15; margin-bottom: 3px;">Чат партии:</div>
             <div class="chat-box" id="in-game-messages" style="height: 80px; margin-bottom: 5px;"></div>
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="game-chat-input" placeholder="Сообщение..." style="margin: 0;">
@@ -152,12 +148,20 @@
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
 
-    <!-- Онлайн меню -->
+    <!-- Онлайн меню с выбором времени -->
     <div class="card section" id="online-menu-section">
         <h2>Онлайн Игра</h2>
-        <div style="margin-bottom: 12px; text-align: left; background: #1e1c19; padding: 10px; border-radius: 4px; border: 1px solid #363431;">
+        <div style="margin-bottom: 12px; text-align: left;">
+            <label style="font-size: 14px; color: #facc15; display: block; margin-bottom: 5px;">⏱️ Контроль времени:</label>
+            <select id="timeControlSelect" style="margin-bottom: 10px;">
+                <option value="60">Пуля (1 мин)</option>
+                <option value="180">Блиц (3 мин)</option>
+                <option value="300" selected>Блиц (5 мин)</option>
+                <option value="600">Рапид (10 мин)</option>
+                <option value="900">Рапид (15 мин)</option>
+            </select>
             <label style="cursor: pointer; font-size: 14px; color: #facc15; display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="ratedGameCheckbox" style="width: auto; margin: 0;"> ⭐ Рейтинговая игра (по Elo)
+                <input type="checkbox" id="ratedGameCheckbox" style="width: auto; margin: 0;"> ⭐ Рейтинговая игра
             </label>
         </div>
         <p style="font-size: 14px; margin-bottom: 10px; color: #facc15;">Выберите цвет фигуры:</p>
@@ -194,11 +198,11 @@
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Шахматные задачи -->
+    <!-- Шахматные задачи (Исправлено: интерактивное решение) -->
     <div class="card section" id="puzzles-section">
         <h2>Тактические задачи</h2>
-        <p id="puzzle-status" style="font-size: 14px; color: #facc15; margin-bottom: 10px;">Найдите лучший ход за белых!</p>
-        <div id="puzzle-chessboard" style="display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 320px; height: 320px; margin: 0 auto 10px auto; border: 3px solid #363431;"></div>
+        <p id="puzzle-status" style="font-size: 14px; color: #facc15; margin-bottom: 10px;">Найдите лучший ход!</p>
+        <div id="puzzle-chessboard" class="chessboard-grid"></div>
         <button type="button" class="btn-login" onclick="loadNextPuzzle()">Следующая задача</button>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
@@ -248,22 +252,21 @@
         let game = new Chess();
         let playerColor = 'white';
         let selectedSquare = null;
-        let bestMoveFrom = null;
-        let bestMoveTo = null;
         let isOnlineGame = false;
-        let isAnalysisMode = false;
         let activeRoomId = null;
         let onlineChannel = null;
         let waitingInterval = null; 
 
+        // Логика для задач
+        let puzzleGame = new Chess();
+        let puzzleSelectedSquare = null;
+        let currentPuzzleData = null;
+
         const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard/move.ogg');
         const captureSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard/capture.ogg');
-        
-        function playSound(isCapture) {
-            try { if (isCapture) captureSound.play(); else moveSound.play(); } catch (e) {}
-        }
+        function playSound(isCapture) { try { if (isCapture) captureSound.play(); else moveSound.play(); } catch (e) {} }
 
-        let whiteTime = 300, blackTime = 300, clockInterval = null;
+        let gameTimeLimit = 300, whiteTime = 300, blackTime = 300, clockInterval = null;
 
         function startClock() {
             if (clockInterval) clearInterval(clockInterval);
@@ -363,10 +366,11 @@
         function openPuzzlesSection() { showSection('puzzles-section'); loadNextPuzzle(); }
         function openDirectMessages() { showSection('dm-section'); }
 
+        // --- ТУРНИРЫ (Исправлено сохранение) ---
         async function loadTournaments() {
             let list = document.getElementById('tournaments-list');
-            let { data } = await supabaseClient.from('tournaments').select('*');
-            if (!data || data.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
+            let { data, error } = await supabaseClient.from('tournaments').select('*').order('created_at', { ascending: false });
+            if (error || !data || data.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
             list.innerHTML = '';
             data.forEach(t => {
                 list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${t.title}</b> (${t.format})</span> <button class="purple-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinTournament('${t.id}')">Участвовать</button></div>`;
@@ -374,10 +378,13 @@
         }
 
         async function createTournamentPrompt() {
+            if (!currentUser) { alert('Сначала войдите в аккаунт!'); return; }
             let title = prompt('Название турнира:');
             if (!title) return;
-            await supabaseClient.from('tournaments').insert([{ title, format: 'arena', status: 'pending' }]);
-            loadTournaments();
+            let format = prompt('Формат турнира (arena / swiss):', 'arena') || 'arena';
+            let { error } = await supabaseClient.from('tournaments').insert([{ title, format, status: 'pending' }]);
+            if (error) alert('Ошибка создания: ' + error.message);
+            else loadTournaments();
         }
 
         async function joinTournament(id) {
@@ -386,10 +393,11 @@
             alert('Вы успешно зарегистрировались в турнире!');
         }
 
+        // --- КЛУБЫ (Исправлено сохранение) ---
         async function loadClubs() {
             let list = document.getElementById('clubs-list');
-            let { data } = await supabaseClient.from('clubs').select('*');
-            if (!data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет.</div>'; return; }
+            let { data, error } = await supabaseClient.from('clubs').select('*').order('created_at', { ascending: false });
+            if (error || !data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет. Создайте первый!</div>'; return; }
             list.innerHTML = '';
             data.forEach(c => {
                 list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinClub('${c.id}')">Вступить</button></div>`;
@@ -397,11 +405,13 @@
         }
 
         async function createClubPrompt() {
+            if (!currentUser) { alert('Сначала войдите в аккаунт!'); return; }
             let name = prompt('Название клуба:');
-            let desc = prompt('Описание клуба:');
             if (!name) return;
-            await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]);
-            loadClubs();
+            let desc = prompt('Описание клуба:');
+            let { error } = await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]);
+            if (error) alert('Ошибка создания: ' + error.message);
+            else loadClubs();
         }
 
         async function joinClub(id) {
@@ -410,26 +420,32 @@
             alert('Вы вступили в клуб!');
         }
 
+        // --- ЗАДАЧИ (Интерактивное решение) ---
         async function loadNextPuzzle() {
-            let { data } = await supabaseClient.from('puzzles').select('*').limit(1);
+            let { data } = await supabaseClient.from('puzzles').select('*').limit(5);
             if (!data || data.length === 0) {
-                // Демо задача если в бд пусто
-                game.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+                puzzleGame.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+                currentPuzzleData = { moves: 'c6d4 f3d4 e5d4' };
             } else {
-                game.load(data[0].fen);
+                let randomPuz = data[Math.floor(Math.random() * data.length)];
+                puzzleGame.load(randomPuz.fen);
+                currentPuzzleData = randomPuz;
             }
+            puzzleSelectedSquare = null;
+            document.getElementById('puzzle-status').textContent = 'Найдите правильный ход!';
             renderPuzzleBoard();
         }
 
         function renderPuzzleBoard() {
             const boardEl = document.getElementById('puzzle-chessboard');
             boardEl.innerHTML = '';
-            let boardData = game.board();
+            let boardData = puzzleGame.board();
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     let sqEl = document.createElement('div');
                     let sqName = ['a','b','c','d','e','f','g','h'][c] + (8 - r);
                     sqEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    if (puzzleSelectedSquare === sqName) sqEl.classList.add('selected');
                     let piece = boardData[r][c];
                     if (piece) {
                         let span = document.createElement('span');
@@ -437,11 +453,30 @@
                         span.className = piece.color === 'w' ? 'white-piece' : 'black-piece';
                         sqEl.appendChild(span);
                     }
+                    sqEl.addEventListener('click', () => onPuzzleSquareClick(sqName));
                     boardEl.appendChild(sqEl);
                 }
             }
         }
 
+        function onPuzzleSquareClick(square) {
+            if (!puzzleSelectedSquare) {
+                let piece = puzzleGame.get(square);
+                if (piece) { puzzleSelectedSquare = square; renderPuzzleBoard(); }
+            } else {
+                let move = puzzleGame.move({ from: puzzleSelectedSquare, to: square, promotion: 'q' });
+                puzzleSelectedSquare = null;
+                renderPuzzleBoard();
+                if (move) {
+                    playSound(move.captured);
+                    document.getElementById('puzzle-status').textContent = 'Верно! Задача решена.';
+                } else {
+                    document.getElementById('puzzle-status').textContent = 'Ошибка, попробуйте другой ход.';
+                }
+            }
+        }
+
+        // --- ЛС И ОБЩИЙ ЧАТ ---
         async function loadDirectMessages() {
             let recipient = document.getElementById('dm-recipient').value;
             if (!recipient) return;
@@ -464,14 +499,13 @@
         }
 
         function openGameSection() {
-            isOnlineGame = false; isAnalysisMode = false; game.reset();
+            isOnlineGame = false; game.reset();
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chess-clock-container').style.display = 'none';
             document.getElementById('chessboard').style.display = 'none';
-            document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'none';
             document.getElementById('undo-btn').style.display = 'none';
             document.getElementById('online-controls').style.display = 'none';
@@ -483,7 +517,7 @@
             if (clockInterval) clearInterval(clockInterval);
             if (isOnlineGame && activeRoomId) await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
-            isOnlineGame = false; isAnalysisMode = false; activeRoomId = null;
+            isOnlineGame = false; activeRoomId = null;
             game.reset();
             showSection('game-hall');
         }
@@ -514,7 +548,7 @@
 
         function undoMove() {
             game.undo();
-            if (!isAnalysisMode && !isOnlineGame && game.history().length > 0) game.undo();
+            if (game.history().length > 0) game.undo();
             selectedSquare = null;
             renderBoard(); updateHistoryDisplay();
         }
@@ -529,9 +563,11 @@
             playerColor = (chosenColor === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : chosenColor;
             let username = currentUser.user_metadata?.username || 'Игрок';
             let isRated = document.getElementById('ratedGameCheckbox').checked;
+            gameTimeLimit = parseInt(document.getElementById('timeControlSelect').value);
+            whiteTime = gameTimeLimit; blackTime = gameTimeLimit;
             game.reset();
             let { data, error } = await supabaseClient.from('rooms').insert([{ 
-                host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual' 
+                host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual', time_limit: gameTimeLimit 
             }]).select().single();
             if (error) { alert('Ошибка: ' + error.message); return; }
             activeRoomId = data.id; isOnlineGame = true;
@@ -545,7 +581,8 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет активных вызовов.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b></span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
+                let timeMin = Math.floor((r.time_limit || 300) / 60);
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b> (${timeMin} мин)</span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
             });
         }
 
@@ -553,6 +590,8 @@
             let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
             if (!roomData) return;
             activeRoomId = id; playerColor = (roomData.host_color === 'white') ? 'black' : 'white'; isOnlineGame = true;
+            gameTimeLimit = roomData.time_limit || 300;
+            whiteTime = gameTimeLimit; blackTime = gameTimeLimit;
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
             startOnlineUI();
