@@ -128,9 +128,14 @@
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
 
-    <!-- Онлайн меню (выбор цвета перед созданием) -->
+    <!-- Онлайн меню (выбор цвета и типа игры) -->
     <div class="card section" id="online-menu-section">
         <h2>Онлайн Игра</h2>
+        <div style="margin-bottom: 12px; text-align: left; background: #222; padding: 10px; border-radius: 4px;">
+            <label style="cursor: pointer; font-size: 14px; color: #FFD700; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="ratedGameCheckbox" style="width: auto; margin: 0;"> ⭐ Рейтинговая игра (по Elo)
+            </label>
+        </div>
         <p style="font-size: 14px; margin-bottom: 10px; color: #FFD700;">Выберите цвет для новой игры:</p>
         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
             <button type="button" class="color-btn" onclick="createOnlineGameWithColor('white')">Белые</button>
@@ -189,7 +194,7 @@
         let activeRoomId = null;
         let onlineChannel = null;
         let waitingInterval = null; 
-        let afkCheckInterval = null; // Таймер проверки выхода соперника (2 минуты)
+        let afkCheckInterval = null;
 
         const pieceSymbols = {
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
@@ -236,17 +241,20 @@
             }
         }
 
-        function openMyProfile() {
+        async function openMyProfile() {
             if (currentUser) {
-                showUserProfile(currentUser.user_metadata?.username || 'Игрок', currentUser.email);
+                let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
+                let userRating = profile ? profile.rating : 1200;
+                showUserProfile(currentUser.user_metadata?.username || 'Игрок', currentUser.email, userRating);
             }
         }
 
-        function showUserProfile(username, email = '') {
+        function showUserProfile(username, email = '', rating = 1200) {
             showSection('profile-section');
             let title = getUserTitle(email, username);
             document.getElementById('profile-info').innerHTML = `
                 <b>Ник:</b> ${username}<br>
+                <b>Рейтинг (Elo):</b> ⭐ ${rating}<br>
                 <b>Звание:</b> ${title}<br>
                 <b>Статус:</b> 🟢 В сети
             `;
@@ -452,19 +460,36 @@
                     return;
                 }
                 let username = currentUser.user_metadata?.username || 'Игрок';
+                let isRated = document.getElementById('ratedGameCheckbox').checked;
+
+                // Получаем рейтинг текущего хоста
+                let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
+                let userRating = profile ? profile.rating : 1200;
 
                 game.reset(); 
                 await supabaseClient.from('rooms').delete().eq('host', username).eq('status', 'waiting');
 
+                let roomPayload = { 
+                    host: username, 
+                    host_id: currentUser.id,
+                    fen: game.fen(), 
+                    status: 'waiting', 
+                    host_color: playerColor,
+                    game_type: isRated ? 'rated' : 'casual',
+                    last_active: new Date().toISOString()
+                };
+
+                if (playerColor === 'white') {
+                    roomPayload.white_id = currentUser.id;
+                    roomPayload.white_rating = userRating;
+                } else {
+                    roomPayload.black_id = currentUser.id;
+                    roomPayload.black_rating = userRating;
+                }
+
                 let { data, error } = await supabaseClient
                     .from('rooms')
-                    .insert([{ 
-                        host: username, 
-                        fen: game.fen(), 
-                        status: 'waiting', 
-                        host_color: playerColor,
-                        last_active: new Date().toISOString()
-                    }])
+                    .insert([roomPayload])
                     .select()
                     .single();
 
@@ -490,7 +515,8 @@
             listEl.innerHTML = '';
             data.forEach(r => {
                 let colorText = r.host_color === 'white' ? 'Белые' : (r.host_color === 'black' ? 'Черные' : 'Случайный');
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><span>${r.host} (${colorText})</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
+                let typeText = r.game_type === 'rated' ? '⭐ Рейтинговая' : '🟢 Обычная';
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><span>${r.host} (${colorText}) [${typeText}]</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
             });
         }
 
@@ -502,10 +528,24 @@
             playerColor = (roomData.host_color === 'white') ? 'black' : 'white';
             isOnlineGame = true;
 
-            await supabaseClient.from('rooms').update({ 
+            // Получаем рейтинг второго игрока
+            let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
+            let userRating = profile ? profile.rating : 1200;
+
+            let updatePayload = { 
                 status: 'playing',
                 last_active: new Date().toISOString()
-            }).eq('id', id);
+            };
+
+            if (playerColor === 'white') {
+                updatePayload.white_id = currentUser.id;
+                updatePayload.white_rating = userRating;
+            } else {
+                updatePayload.black_id = currentUser.id;
+                updatePayload.black_rating = userRating;
+            }
+
+            await supabaseClient.from('rooms').update(updatePayload).eq('id', id);
 
             setupOnlineChannel(id);
             startOnlineUI();
@@ -536,19 +576,23 @@
                     game.load(payload.payload.fen);
                     renderBoard();
                     updateHistoryDisplay();
+                    checkGameOverCondition();
                 })
-                .on('broadcast', { event: 'resign' }, payload => {
+                .on('broadcast', { event: 'resign' }, async payload => {
                     alert(`Соперник сдался! Вы победили 🎉`);
+                    await finalizeGameOnServer(playerColor === 'white' ? 'white' : 'black');
                     resetGameMenu();
                 })
                 .on('broadcast', { event: 'draw_offer' }, payload => {
                     if (confirm('Соперник предлагает ничью. Согласны?')) {
                         onlineChannel.send({ type: 'broadcast', event: 'draw_accept', payload: {} });
-                        alert('Ничья согласна!');
+                        finalizeGameOnServer('draw');
+                        alert('Ничья принята!');
                         resetGameMenu();
                     }
                 })
                 .on('broadcast', { event: 'draw_accept' }, payload => {
+                    finalizeGameOnServer('draw');
                     alert('Ничья принята!');
                     resetGameMenu();
                 })
@@ -568,7 +612,7 @@
             document.getElementById('online-controls').style.display = 'flex';
             document.getElementById('online-controls').style.gap = '5px';
             renderBoard();
-            startAfkChecker(); // Запускаем проверку таймера неактивности
+            startAfkChecker();
         }
 
         function setupOnlineChannel(id) {
@@ -578,26 +622,47 @@
                     game.load(payload.payload.fen);
                     renderBoard();
                     updateHistoryDisplay();
+                    checkGameOverCondition();
                 })
-                .on('broadcast', { event: 'resign' }, payload => {
+                .on('broadcast', { event: 'resign' }, async payload => {
                     alert(`Соперник сдался! Вы победили 🎉`);
+                    await finalizeGameOnServer(playerColor === 'white' ? 'white' : 'black');
                     resetGameMenu();
                 })
                 .on('broadcast', { event: 'draw_offer' }, payload => {
                     if (confirm('Соперник предлагает ничью. Согласны?')) {
                         onlineChannel.send({ type: 'broadcast', event: 'draw_accept', payload: {} });
-                        alert('Ничья согласна!');
+                        finalizeGameOnServer('draw');
+                        alert('Ничья принята!');
                         resetGameMenu();
                     }
                 })
                 .on('broadcast', { event: 'draw_accept' }, payload => {
+                    finalizeGameOnServer('draw');
                     alert('Ничья принята!');
                     resetGameMenu();
                 })
                 .subscribe();
         }
 
-        // Проверка неактивности соперника (2 минуты)
+        async function finalizeGameOnServer(winnerColor) {
+            if (!activeRoomId) return;
+            await supabaseClient.from('rooms').update({
+                status: 'finished',
+                winner: winnerColor
+            }).eq('id', activeRoomId);
+        }
+
+        function checkGameOverCondition() {
+            if (game.game_over()) {
+                let winner = 'draw';
+                if (game.in_checkmate()) {
+                    winner = game.turn() === 'w' ? 'black' : 'white';
+                }
+                finalizeGameOnServer(winner);
+            }
+        }
+
         function startAfkChecker() {
             if (afkCheckInterval) clearInterval(afkCheckInterval);
 
@@ -617,22 +682,24 @@
                     let currentTime = new Date().getTime();
                     let diffSeconds = (currentTime - lastActiveTime) / 1000;
 
-                    // Если прошло больше 120 секунд (2 минут) с момента последней активности
                     if (diffSeconds > 120) {
                         clearInterval(afkCheckInterval);
                         alert('Соперник покинул игру или долго не отвечает. Вам засчитана техническая победа 🏆');
+                        await finalizeGameOnServer(playerColor === 'white' ? 'white' : 'black');
                         await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
                         resetGameMenu();
                     }
                 }
-            }, 5000); // Проверяем каждые 5 секунд
+            }, 5000);
         }
 
-        function resignGame() {
+        async function resignGame() {
             if (!confirm('Вы уверены, что хотите сдаться?')) return;
+            let opponentColor = playerColor === 'white' ? 'black' : 'white';
             if (onlineChannel) {
                 onlineChannel.send({ type: 'broadcast', event: 'resign', payload: {} });
             }
+            await finalizeGameOnServer(opponentColor);
             alert('Вы сдались. Победа соперника.');
             resetGameMenu();
         }
@@ -709,7 +776,7 @@
                 if (move) {
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen() } });
-                        // Обновляем состояние игры и свежий таймер активности
+                        checkGameOverCondition();
                         supabaseClient.from('rooms').update({ 
                             fen: game.fen(),
                             last_active: new Date().toISOString()
