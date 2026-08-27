@@ -86,6 +86,14 @@
         <button type="button" class="btn-logout" onclick="handleLogout()">Выйти</button>
     </div>
 
+    <!-- Зал ожидания соперника -->
+    <div class="card section" id="waiting-room-section">
+        <h2>Ожидание соперника</h2>
+        <p style="font-size: 14px; margin-bottom: 20px; color: #FFD700;">Ваша заявка создана. Ожидаем подключения второго игрока...</p>
+        <div style="font-size: 40px; margin-bottom: 20px;">⏳</div>
+        <button type="button" class="btn-back" onclick="cancelWaitingRoom()">Отменить поиск</button>
+    </div>
+
     <!-- Игровое поле / Анализ -->
     <div class="card section" id="game-section">
         <h2 id="section-title">Анализ партии</h2>
@@ -312,6 +320,16 @@
             showSection('game-hall');
         }
 
+        async function cancelWaitingRoom() {
+            if (activeRoomId) {
+                await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
+            }
+            if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
+            activeRoomId = null;
+            isOnlineGame = false;
+            showSection('game-hall');
+        }
+
         function chooseColor(color) {
             playerColor = (color === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : color;
             document.getElementById('step-color').style.display = 'none';
@@ -432,7 +450,7 @@
 
                 let { data, error } = await supabaseClient
                     .from('rooms')
-                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor, message: '' }])
+                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor }])
                     .select()
                     .single();
 
@@ -443,8 +461,10 @@
 
                 activeRoomId = data.id;
                 isOnlineGame = true;
-                setupOnlineChannel(activeRoomId);
-                startOnlineUI();
+                
+                // Переходим в зал ожидания вместо доски
+                showSection('waiting-room-section');
+                setupHostWaitingChannel(activeRoomId);
             } catch (err) {
                 alert('Критическая ошибка: ' + err.message);
             }
@@ -478,6 +498,39 @@
                 renderBoard();
                 updateHistoryDisplay();
             }
+        }
+
+        // Канал для хоста в зале ожидания: слушает изменение статуса комнаты на 'playing'
+        function setupHostWaitingChannel(id) {
+            if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
+            onlineChannel = supabaseClient.channel(`room_${id}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${id}` }, payload => {
+                    if (payload.new.status === 'playing') {
+                        startOnlineUI();
+                        setupOnlineChannel(id); // переключаемся на игровой канал для ходов
+                    }
+                })
+                .on('broadcast', { event: 'move' }, payload => {
+                    game.load(payload.payload.fen);
+                    renderBoard();
+                    updateHistoryDisplay();
+                })
+                .on('broadcast', { event: 'resign' }, payload => {
+                    alert(`Соперник сдался! Вы победили 🎉`);
+                    resetGameMenu();
+                })
+                .on('broadcast', { event: 'draw_offer' }, payload => {
+                    if (confirm('Соперник предлагает ничью. Согласны?')) {
+                        onlineChannel.send({ type: 'broadcast', event: 'draw_accept', payload: {} });
+                        alert('Ничья согласна!');
+                        resetGameMenu();
+                    }
+                })
+                .on('broadcast', { event: 'draw_accept' }, payload => {
+                    alert('Ничья принята!');
+                    resetGameMenu();
+                })
+                .subscribe();
         }
 
         function startOnlineUI() {
