@@ -288,10 +288,14 @@
             document.getElementById('undo-btn').style.display = 'none';
         }
 
-        function resetGameMenu() {
+        async function resetGameMenu() {
+            if (isOnlineGame && activeRoomId) {
+                await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
+            }
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             isOnlineGame = false;
             isAnalysisMode = false;
+            activeRoomId = null;
             showSection('game-hall');
         }
 
@@ -322,6 +326,17 @@
         async function requestStockfishCloud() {
             if (!isAnalysisMode) return;
             const panel = document.getElementById('analysis-panel');
+            
+            // Если игра уже завершена матом, сразу пишем мат без запросов к сети
+            if (game.in_checkmate()) {
+                let winner = game.turn() === 'w' ? 'Черные поставили мат' : 'Белые поставили мат';
+                panel.textContent = `🤖 Стокфиш: Мат! (${winner})`;
+                bestMoveFrom = null;
+                bestMoveTo = null;
+                renderBoard();
+                return;
+            }
+
             panel.textContent = '🤖 Стокфиш анализирует позицию...';
             bestMoveFrom = null;
             bestMoveTo = null;
@@ -398,6 +413,10 @@
                     return;
                 }
                 let username = currentUser.user_metadata?.username || 'Игрок';
+
+                // Удаляем старые незавершенные комнаты этого хоста, чтобы они не пересекались
+                await supabaseClient.from('rooms').delete().eq('host', username).eq('status', 'waiting');
+
                 let { data, error } = await supabaseClient
                     .from('rooms')
                     .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor }])
@@ -424,7 +443,7 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет свободных игр.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${r.host}</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${r.host} (${r.host_color === 'white' ? 'Белые' : 'Черные'})</span><button class="bot-btn" style="width:auto; padding:2px 8px; margin:0;" onclick="joinOnline(${r.id})">Войти</button></div>`;
             });
         }
 
@@ -440,7 +459,6 @@
             setupOnlineChannel(id);
             startOnlineUI();
             
-            // Загружаем текущее состояние доски из базы на случай, если создатель уже сходил
             if (roomData.fen) {
                 game.load(roomData.fen);
                 renderBoard();
@@ -534,7 +552,6 @@
                 if (move) {
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen() } });
-                        // Также сохраняем текущий fen в комнату на случай переподключения
                         supabaseClient.from('rooms').update({ fen: game.fen() }).eq('id', activeRoomId);
                     } else if (isAnalysisMode) {
                         requestStockfishCloud();
