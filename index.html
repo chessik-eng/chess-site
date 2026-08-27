@@ -146,7 +146,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kxetnpcgftrcnyppwqlt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXRucGNnZnRyY255cHB3cWx0Iiwicm9sZSI6ImFub24iOiJpYXQiOjE3ODc2Mjc4NzIsImV4cCI6MjEwMzIwMzg3Mn0.sCn_jUrDLWpyz4qRlkr6EKklvrx1UKdCJUkutWcZ8Po';
+        const SUPABASE_ANON_KEY = 'sb_publishable_63F9VzVBhnlYW9WVf4d59w_-nmYxdFV';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
@@ -278,7 +278,7 @@
 
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'none'; // Стокфиш скрыт в игре с ботом
+            document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
 
@@ -287,9 +287,8 @@
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
         }
 
-        // --- ТОЧНЫЙ АНАЛИЗ СТОКФИШ (ТОЛЬКО ДЛЯ РЕЖИМА АНАЛИЗА) ---
         async function requestStockfishCloud() {
-            if (!isAnalysisMode) return; // Защита: не запрашиваем Стокфиш вне режима анализа
+            if (!isAnalysisMode) return;
             const panel = document.getElementById('analysis-panel');
             panel.textContent = '🤖 Стокфиш анализирует позицию...';
             bestMoveFrom = null;
@@ -298,7 +297,7 @@
 
             try {
                 let fen = encodeURIComponent(game.fen());
-                let res = await fetch(`https://lichess.org/api/cloud-eval?fen=${fen}`);
+                let res = await fetch(`url?id=9api/cloud-eval?fen=${fen}`);
                 let data = await res.json();
 
                 if (data && data.pvs && data.pvs.length > 0) {
@@ -330,7 +329,6 @@
             }
         }
 
-        // --- ОТМЕНА ХОДА ---
         function undoMove() {
             game.undo();
             if (!isAnalysisMode && !isOnlineGame && game.history().length > 0) {
@@ -349,7 +347,6 @@
             document.getElementById('moves-text').textContent = history.length === 0 ? 'нет' : history.join(' ');
         }
 
-        // --- ОНЛАЙН ЛОББИ ---
         async function createOnlineGame() {
             if (!currentUser) return alert('Войдите в аккаунт!');
             let username = currentUser.user_metadata?.username || 'Игрок';
@@ -385,7 +382,7 @@
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Онлайн Партия';
             document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('analysis-panel').style.display = 'none'; // Стокфиш скрыт в онлайн-игре
+            document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'none';
             renderBoard();
@@ -401,7 +398,6 @@
                 }).subscribe();
         }
 
-        // --- ОТРИСОВКА ДОСКИ С ПОДСВЕТКОЙ ЛУЧШЕГО ХОДА ---
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
             boardEl.innerHTML = '';
