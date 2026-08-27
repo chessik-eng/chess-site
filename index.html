@@ -26,11 +26,9 @@
         .online-btn { background: #0d9488; color: white; }
         .purple-btn { background: #8b5cf6; color: white; }
 
-        /* Шахматные часы */
         .chess-clock { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; background: #1e1c19; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #363431; }
         .clock-active { color: #629924; text-shadow: 0 0 8px rgba(98, 153, 36, 0.4); }
 
-        /* Шахматная доска */
         .chessboard-grid {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -57,7 +55,6 @@
         .black-piece { color: #222222; text-shadow: 0 1px 2px rgba(255,255,255,0.3); }
         .square.selected { background: #bbc953 !important; }
 
-        #analysis-panel { background: #1e1c19; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 8px; color: #4ade80; text-align: left; border: 1px solid #363431; }
         #moves-history { background: #1e1c19; height: 70px; border-radius: 4px; padding: 8px; overflow-y: auto; font-size: 13px; text-align: left; margin-bottom: 8px; color: #dfdfdf; border: 1px solid #363431; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -121,7 +118,6 @@
             </div>
         </div>
 
-        <!-- Шахматные часы -->
         <div id="chess-clock-container" class="chess-clock" style="display: none;">
             <span id="white-timer">⏱️ Белые: 05:00</span>
             <span id="black-timer">⏱️ Черные: 05:00</span>
@@ -130,7 +126,6 @@
         <div id="chessboard" class="chessboard-grid" style="display: none;"></div>
         <div id="moves-history" style="display: none;"><b>История ходов:</b> <span id="moves-text">нет</span></div>
         
-        <!-- Чат в игре -->
         <div id="in-game-chat-container" style="display: none; margin-bottom: 8px; text-align: left;">
             <div style="font-size: 12px; color: #facc15; margin-bottom: 3px;">Чат партии:</div>
             <div class="chat-box" id="in-game-messages" style="height: 80px; margin-bottom: 5px;"></div>
@@ -198,7 +193,16 @@
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Шахматные задачи (Исправлено: интерактивное решение) -->
+    <!-- Страница конкретного клуба -->
+    <div class="card section" id="club-detail-section">
+        <h2 id="club-detail-name">Клуб</h2>
+        <p id="club-detail-desc" style="font-size: 14px; color: #facc15; margin-bottom: 15px; text-align: left;"></p>
+        <div style="font-size: 13px; color: #bababa; text-align: left; margin-bottom: 5px;">Участники клуба:</div>
+        <div class="players-box" id="club-members-list"><div>Загрузка участников...</div></div>
+        <button type="button" class="btn-back" onclick="openClubsSection()">Назад к клубам</button>
+    </div>
+
+    <!-- Шахматные задачи -->
     <div class="card section" id="puzzles-section">
         <h2>Тактические задачи</h2>
         <p id="puzzle-status" style="font-size: 14px; color: #facc15; margin-bottom: 10px;">Найдите лучший ход!</p>
@@ -207,17 +211,16 @@
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
 
-    <!-- Личные сообщения -->
+    <!-- Личные сообщения (Исправлено сохранение и отправка) -->
     <div class="card section" id="dm-section">
         <h2>Личные сообщения</h2>
-        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-            <input type="text" id="dm-recipient" placeholder="Ник получателя..." style="margin:0;">
-            <button type="button" class="online-btn" style="width: 100px; margin:0;" onclick="loadDirectMessages()">Найти</button>
+        <input type="text" id="dm-recipient" placeholder="Ник получателя (например, opponent)..." onchange="loadDirectMessages()">
+        <div class="chat-box" id="dm-messages"><div>Введите ник получателя и нажмите Enter или начните переписку</div></div>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="dm-input" placeholder="Введите сообщение..." style="margin:0;">
+            <button type="button" class="btn-login" style="width: 100px; margin:0;" onclick="sendDirectMessage()">Отправить</button>
         </div>
-        <div class="chat-box" id="dm-messages"><div>Выберите чат или введите ник игрока</div></div>
-        <input type="text" id="dm-input" placeholder="Введите сообщение...">
-        <button type="button" class="btn-login" onclick="sendDirectMessage()">Отправить ЛС</button>
-        <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
+        <button type="button" class="btn-back" onclick="showSection('game-hall')" style="margin-top: 10px;">Назад в зал</button>
     </div>
 
     <!-- Общий чат -->
@@ -257,7 +260,6 @@
         let onlineChannel = null;
         let waitingInterval = null; 
 
-        // Логика для задач
         let puzzleGame = new Chess();
         let puzzleSelectedSquare = null;
         let currentPuzzleData = null;
@@ -364,16 +366,23 @@
         function openTournamentsSection() { showSection('tournaments-section'); loadTournaments(); }
         function openClubsSection() { showSection('clubs-section'); loadClubs(); }
         function openPuzzlesSection() { showSection('puzzles-section'); loadNextPuzzle(); }
-        function openDirectMessages() { showSection('dm-section'); }
+        function openDirectMessages() { showSection('dm-section'); loadDirectMessages(); }
 
-        // --- ТУРНИРЫ (Исправлено сохранение) ---
+        // --- ТУРНИРЫ (Исправлено исчезновение кнопки) ---
         async function loadTournaments() {
             let list = document.getElementById('tournaments-list');
-            let { data, error } = await supabaseClient.from('tournaments').select('*').order('created_at', { ascending: false });
-            if (error || !data || data.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
+            let { data: tournaments } = await supabaseClient.from('tournaments').select('*').order('created_at', { ascending: false });
+            let { data: myParts } = await supabaseClient.from('tournament_participants').select('tournament_id').eq('user_id', currentUser.id);
+            let myTournaments = new Set(myParts?.map(p => p.tournament_id));
+
+            if (!tournaments || tournaments.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
             list.innerHTML = '';
-            data.forEach(t => {
-                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${t.title}</b> (${t.format})</span> <button class="purple-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinTournament('${t.id}')">Участвовать</button></div>`;
+            tournaments.forEach(t => {
+                let joined = myTournaments.has(t.id);
+                let btnHtml = joined 
+                    ? `<span style="color: #629924; font-size: 13px; font-weight: bold;">✓ Вы участник</span>` 
+                    : `<button class="purple-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinTournament('${t.id}')">Участвовать</button>`;
+                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${t.title}</b> (${t.format})</span> ${btnHtml}</div>`;
             });
         }
 
@@ -382,25 +391,44 @@
             let title = prompt('Название турнира:');
             if (!title) return;
             let format = prompt('Формат турнира (arena / swiss):', 'arena') || 'arena';
-            let { error } = await supabaseClient.from('tournaments').insert([{ title, format, status: 'pending' }]);
-            if (error) alert('Ошибка создания: ' + error.message);
-            else loadTournaments();
+            let { data, error } = await supabaseClient.from('tournaments').insert([{ title, format, status: 'pending' }]).select().single();
+            if (error) { alert('Ошибка создания: ' + error.message); return; }
+            await supabaseClient.from('tournament_participants').insert([{ tournament_id: data.id, user_id: currentUser.id }]);
+            loadTournaments();
         }
 
         async function joinTournament(id) {
             if (!currentUser) { alert('Войдите в аккаунт'); return; }
             await supabaseClient.from('tournament_participants').insert([{ tournament_id: id, user_id: currentUser.id }]);
-            alert('Вы успешно зарегистрировались в турнире!');
+            loadTournaments();
         }
 
-        // --- КЛУБЫ (Исправлено сохранение) ---
+        // --- КЛУБЫ (Автоматическое добавление создателя и страница клуба) ---
         async function loadClubs() {
             let list = document.getElementById('clubs-list');
             let { data, error } = await supabaseClient.from('clubs').select('*').order('created_at', { ascending: false });
             if (error || !data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет. Создайте первый!</div>'; return; }
             list.innerHTML = '';
             data.forEach(c => {
-                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="joinClub('${c.id}')">Вступить</button></div>`;
+                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openClubDetail('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${(c.description || '').replace(/'/g, "\\'")}')"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="event.stopPropagation(); openClubDetail('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${(c.description || '').replace(/'/g, "\\'")}')">Открыть</button></div>`;
+            });
+        }
+
+        async function openClubDetail(id, name, desc) {
+            showSection('club-detail-section');
+            document.getElementById('club-detail-name').textContent = name;
+            document.getElementById('club-detail-desc').textContent = desc || 'Без описания';
+            let membersListEl = document.getElementById('club-members-list');
+            membersListEl.innerHTML = '<div>Загрузка участников...</div>';
+
+            let { data: members } = await supabaseClient.from('club_members').select('user_id').eq('club_id', id);
+            membersListEl.innerHTML = '';
+            if (!members || members.length === 0) {
+                membersListEl.innerHTML = '<div>Нет участников</div>';
+                return;
+            }
+            members.forEach(m => {
+                membersListEl.innerHTML += `<div style="margin-bottom: 4px;">♟️ Участник (ID: ${m.user_id.slice(0, 8)}...)</div>`;
             });
         }
 
@@ -409,18 +437,48 @@
             let name = prompt('Название клуба:');
             if (!name) return;
             let desc = prompt('Описание клуба:');
-            let { error } = await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]);
-            if (error) alert('Ошибка создания: ' + error.message);
-            else loadClubs();
+            let { data, error } = await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]).select().single();
+            if (error) { alert('Ошибка создания: ' + error.message); return; }
+            
+            // Автоматически добавляем создателя в участники клуба
+            await supabaseClient.from('club_members').insert([{ club_id: data.id, user_id: currentUser.id }]);
+            openClubDetail(data.id, name, desc);
         }
 
-        async function joinClub(id) {
-            if (!currentUser) { alert('Войдите в аккаунт'); return; }
-            await supabaseClient.from('club_members').insert([{ club_id: id, user_id: currentUser.id }]);
-            alert('Вы вступили в клуб!');
+        // --- ЛИЧНЫЕ СООБЩЕНИЯ (Исправлено сохранение и получение) ---
+        async function loadDirectMessages() {
+            let recipient = document.getElementById('dm-recipient').value.trim();
+            let box = document.getElementById('dm-messages');
+            if (!recipient) {
+                box.innerHTML = '<div>Введите ник получателя выше, чтобы начать чат</div>';
+                return;
+            }
+            let { data } = await supabaseClient.from('direct_messages').select('*').or(`and(sender_id.eq.${currentUser.id}),and(receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+            box.innerHTML = '';
+            if (!data || data.length === 0) {
+                box.innerHTML = `<div>Нет сообщений с ${recipient}</div>`;
+                return;
+            }
+            data.forEach(m => {
+                let isMe = m.sender_id === currentUser.id;
+                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${isMe ? 'Вы' : recipient}:</b> ${m.content}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
         }
 
-        // --- ЗАДАЧИ (Интерактивное решение) ---
+        async function sendDirectMessage() {
+            let recipient = document.getElementById('dm-recipient').value.trim();
+            let input = document.getElementById('dm-input');
+            let content = input.value.trim();
+            if (!recipient || !content) { alert('Укажите получателя и текст сообщения!'); return; }
+            
+            let { error } = await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content }]);
+            if (error) { alert('Ошибка отправки: ' + error.message); return; }
+            input.value = '';
+            loadDirectMessages();
+        }
+
+        // --- ЗАДАЧИ ---
         async function loadNextPuzzle() {
             let { data } = await supabaseClient.from('puzzles').select('*').limit(5);
             if (!data || data.length === 0) {
@@ -474,28 +532,6 @@
                     document.getElementById('puzzle-status').textContent = 'Ошибка, попробуйте другой ход.';
                 }
             }
-        }
-
-        // --- ЛС И ОБЩИЙ ЧАТ ---
-        async function loadDirectMessages() {
-            let recipient = document.getElementById('dm-recipient').value;
-            if (!recipient) return;
-            let box = document.getElementById('dm-messages');
-            let { data } = await supabaseClient.from('direct_messages').select('*').order('created_at', { ascending: true });
-            box.innerHTML = '';
-            data?.forEach(m => {
-                box.innerHTML += `<div><b>${m.sender_id === currentUser.id ? 'Вы' : recipient}:</b> ${m.content}</div>`;
-            });
-            box.scrollTop = box.scrollHeight;
-        }
-
-        async function sendDirectMessage() {
-            let recipientId = document.getElementById('dm-recipient').value;
-            let input = document.getElementById('dm-input');
-            if (!input.value.trim() || !recipientId) return;
-            await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content: input.value.trim() }]);
-            input.value = '';
-            loadDirectMessages();
         }
 
         function openGameSection() {
