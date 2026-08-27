@@ -188,7 +188,8 @@
         let isAnalysisMode = false;
         let activeRoomId = null;
         let onlineChannel = null;
-        let waitingInterval = null; // Таймер для проверки комнаты
+        let waitingInterval = null; 
+        let afkCheckInterval = null; // Таймер проверки выхода соперника (2 минуты)
 
         const pieceSymbols = {
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
@@ -254,6 +255,7 @@
         async function handleLogout() {
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             if (waitingInterval) clearInterval(waitingInterval);
+            if (afkCheckInterval) clearInterval(afkCheckInterval);
             await supabaseClient.auth.signOut();
             location.reload();
         }
@@ -312,6 +314,7 @@
 
         async function resetGameMenu() {
             if (waitingInterval) clearInterval(waitingInterval);
+            if (afkCheckInterval) clearInterval(afkCheckInterval);
             if (isOnlineGame && activeRoomId) {
                 await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             }
@@ -325,6 +328,7 @@
 
         async function cancelWaitingRoom() {
             if (waitingInterval) clearInterval(waitingInterval);
+            if (afkCheckInterval) clearInterval(afkCheckInterval);
             if (activeRoomId) {
                 await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             }
@@ -454,7 +458,13 @@
 
                 let { data, error } = await supabaseClient
                     .from('rooms')
-                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor }])
+                    .insert([{ 
+                        host: username, 
+                        fen: game.fen(), 
+                        status: 'waiting', 
+                        host_color: playerColor,
+                        last_active: new Date().toISOString()
+                    }])
                     .select()
                     .single();
 
@@ -466,7 +476,6 @@
                 activeRoomId = data.id;
                 isOnlineGame = true;
                 
-                // Переходим в зал ожидания
                 showSection('waiting-room-section');
                 setupHostWaitingChannel(activeRoomId);
             } catch (err) {
@@ -493,7 +502,11 @@
             playerColor = (roomData.host_color === 'white') ? 'black' : 'white';
             isOnlineGame = true;
 
-            await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
+            await supabaseClient.from('rooms').update({ 
+                status: 'playing',
+                last_active: new Date().toISOString()
+            }).eq('id', id);
+
             setupOnlineChannel(id);
             startOnlineUI();
             
@@ -504,7 +517,6 @@
             }
         }
 
-        // Надежная проверка для хоста (опрашивает базу каждые 1.5 секунды)
         function setupHostWaitingChannel(id) {
             if (waitingInterval) clearInterval(waitingInterval);
             
@@ -518,7 +530,6 @@
                 }
             }, 1500);
 
-            // WebSocket для ходов и событий матча
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             onlineChannel = supabaseClient.channel(`room_${id}`)
                 .on('broadcast', { event: 'move' }, payload => {
@@ -557,6 +568,7 @@
             document.getElementById('online-controls').style.display = 'flex';
             document.getElementById('online-controls').style.gap = '5px';
             renderBoard();
+            startAfkChecker(); // Запускаем проверку таймера неактивности
         }
 
         function setupOnlineChannel(id) {
@@ -583,6 +595,37 @@
                     resetGameMenu();
                 })
                 .subscribe();
+        }
+
+        // Проверка неактивности соперника (2 минуты)
+        function startAfkChecker() {
+            if (afkCheckInterval) clearInterval(afkCheckInterval);
+
+            afkCheckInterval = setInterval(async () => {
+                if (!isOnlineGame || !activeRoomId) return;
+
+                let { data, error } = await supabaseClient
+                    .from('rooms')
+                    .select('last_active, status')
+                    .eq('id', activeRoomId)
+                    .single();
+
+                if (error || !data || data.status !== 'playing') return;
+
+                if (data.last_active) {
+                    let lastActiveTime = new Date(data.last_active).getTime();
+                    let currentTime = new Date().getTime();
+                    let diffSeconds = (currentTime - lastActiveTime) / 1000;
+
+                    // Если прошло больше 120 секунд (2 минут) с момента последней активности
+                    if (diffSeconds > 120) {
+                        clearInterval(afkCheckInterval);
+                        alert('Соперник покинул игру или долго не отвечает. Вам засчитана техническая победа 🏆');
+                        await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
+                        resetGameMenu();
+                    }
+                }
+            }, 5000); // Проверяем каждые 5 секунд
         }
 
         function resignGame() {
@@ -666,7 +709,11 @@
                 if (move) {
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen() } });
-                        supabaseClient.from('rooms').update({ fen: game.fen() }).eq('id', activeRoomId);
+                        // Обновляем состояние игры и свежий таймер активности
+                        supabaseClient.from('rooms').update({ 
+                            fen: game.fen(),
+                            last_active: new Date().toISOString()
+                        }).eq('id', activeRoomId);
                     } else if (isAnalysisMode) {
                         requestStockfishCloud();
                     } else if (!game.game_over()) {
