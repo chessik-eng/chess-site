@@ -203,7 +203,6 @@
         let activeRoomId = null;
         let onlineChannel = null;
         let waitingInterval = null; 
-        let afkCheckInterval = null;
 
         // Аудиоэффекты Lichess Style
         const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_standard/move.ogg');
@@ -328,7 +327,6 @@
         async function handleLogout() {
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             if (waitingInterval) clearInterval(waitingInterval);
-            if (afkCheckInterval) clearInterval(afkCheckInterval);
             if (clockInterval) clearInterval(clockInterval);
             await supabaseClient.auth.signOut();
             location.reload();
@@ -387,7 +385,6 @@
 
         async function resetGameMenu() {
             if (waitingInterval) clearInterval(waitingInterval);
-            if (afkCheckInterval) clearInterval(afkCheckInterval);
             if (clockInterval) clearInterval(clockInterval);
             if (isOnlineGame && activeRoomId) {
                 await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
@@ -496,8 +493,7 @@
                     fen: game.fen(), 
                     status: 'waiting', 
                     host_color: playerColor,
-                    game_type: isRated ? 'rated' : 'casual',
-                    last_active: new Date().toISOString()
+                    game_type: isRated ? 'rated' : 'casual'
                 };
 
                 if (playerColor === 'white') {
@@ -543,7 +539,7 @@
             let { data: profile } = await supabaseClient.from('profiles').select('rating').eq('id', currentUser.id).single();
             let userRating = profile ? profile.rating : 1200;
 
-            let updatePayload = { status: 'playing', last_active: new Date().toISOString() };
+            let updatePayload = { status: 'playing' };
             if (playerColor === 'white') {
                 updatePayload.white_id = currentUser.id;
                 updatePayload.white_rating = userRating;
@@ -626,7 +622,6 @@
             document.getElementById('online-controls').style.display = 'flex';
             renderBoard();
             startClock();
-            startAfkChecker();
         }
 
         async function finalizeGameOnServer(winnerColor) {
@@ -643,25 +638,6 @@
                 if (game.in_checkmate()) winner = game.turn() === 'w' ? 'black' : 'white';
                 finalizeGameOnServer(winner);
             }
-        }
-
-        function startAfkChecker() {
-            if (afkCheckInterval) clearInterval(afkCheckInterval);
-            afkCheckInterval = setInterval(async () => {
-                if (!isOnlineGame || !activeRoomId) return;
-                let { data } = await supabaseClient.from('rooms').select('last_active, status').eq('id', activeRoomId).single();
-                if (!data || data.status !== 'playing') return;
-                if (data.last_active) {
-                    let diff = (new Date().getTime() - new Date(data.last_active).getTime()) / 1000;
-                    if (diff > 120) {
-                        clearInterval(afkCheckInterval);
-                        alert('Соперник покинул игру. Техническая победа 🏆');
-                        await finalizeGameOnServer(playerColor === 'white' ? 'white' : 'black');
-                        await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
-                        resetGameMenu();
-                    }
-                }
-            }, 5000);
         }
 
         async function resignGame() {
@@ -752,7 +728,7 @@
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen(), isCapture } });
                         checkGameOverCondition();
-                        supabaseClient.from('rooms').update({ fen: game.fen(), last_active: new Date().toISOString() }).eq('id', activeRoomId);
+                        supabaseClient.from('rooms').update({ fen: game.fen() }).eq('id', activeRoomId);
                     } else if (isAnalysisMode) {
                         requestStockfishCloud();
                     } else if (!game.game_over()) {
