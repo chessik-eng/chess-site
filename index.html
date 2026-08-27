@@ -180,9 +180,10 @@
             'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
         };
 
-        // Функция определения звания по почте или нику (укажите вашу почту создателя)
         function getUserTitle(email, username) {
-            if (email === 'ваш_email@gmail.com' || username === 'Создатель') return '👑 Создатель сайта';
+            if (username === 'Шахматный клуб' || username === 'chessik-eng' || (email && email.includes('chessik'))) {
+                return '👑 Создатель сайта';
+            }
             if (email && email.includes('mod')) return '🛡️ Модератор';
             return '♟️ Обычный игрок';
         }
@@ -225,7 +226,7 @@
             }
         }
 
-        function showUserProfile(username, email) {
+        function showUserProfile(username, email = '') {
             showSection('profile-section');
             let title = getUserTitle(email, username);
             document.getElementById('profile-info').innerHTML = `
@@ -328,7 +329,7 @@
 
             try {
                 let fen = encodeURIComponent(game.fen());
-                let res = await fetch(`api/cloud-eval?fen=${fen}`);
+                let res = await fetch(`https://lichess.org/api/cloud-eval?fen=${fen}`);
                 let data = await res.json();
 
                 if (data && data.pvs && data.pvs.length > 0) {
@@ -356,7 +357,7 @@
                     renderBoard();
                 }
             } catch (e) {
-                panel.textContent = '🤖 Стокфиш: Не удалось получить оценку сети';
+                panel.textContent = '🤖 Стокфиш: Ошибка связи с сервером оценки';
             }
         }
 
@@ -392,7 +393,7 @@
                 let username = currentUser.user_metadata?.username || 'Игрок';
                 let { data, error } = await supabaseClient
                     .from('rooms')
-                    .insert([{ host: username, fen: game.fen(), status: 'waiting' }])
+                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor }])
                     .select()
                     .single();
 
@@ -421,9 +422,14 @@
         }
 
         async function joinOnline(id) {
+            let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
+            if (!roomData) { alertкомнат('Комната не найдена'); return; }
+
             activeRoomId = id;
-            playerColor = 'black'; // Присоединившийся играет за черных
+            // Присоединяющийся всегда получает противоположный цвет
+            playerColor = (roomData.host_color === 'white') ? 'black' : 'white';
             isOnlineGame = true;
+
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
             startOnlineUI();
