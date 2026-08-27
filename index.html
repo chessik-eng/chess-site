@@ -16,6 +16,8 @@
         .btn-logout { background: #f44336; color: white; }
         .btn-back { background: #757575; color: white; }
         .btn-undo { background: #ff9800; color: white; }
+        .btn-resign { background: #e91e63; color: white; }
+        .btn-draw { background: #9c27b0; color: white; }
         .section { display: none; }
         .chat-box, .players-box { height: 150px; background: #222; border-radius: 4px; padding: 10px; overflow-y: scroll; margin-bottom: 10px; font-size: 14px; text-align: left; }
         .bot-btn { background: #ff9800; color: white; }
@@ -111,6 +113,10 @@
         <div id="moves-history" style="display: none;"><b>Ходы:</b> <span id="moves-text">нет</span></div>
         
         <button type="button" id="undo-btn" class="btn-undo" style="display: none;" onclick="undoMove()">↩️ Вернуть ход</button>
+        <div id="online-controls" style="display: none; margin-bottom: 8px;">
+            <button type="button" class="btn-draw" onclick="proposeDraw()">🤝 Предложить ничью</button>
+            <button type="button" class="btn-resign" onclick="resignGame()">🏳️ Сдаться</button>
+        </div>
         <button type="button" class="btn-back" onclick="resetGameMenu()">Назад в зал</button>
     </div>
 
@@ -250,7 +256,7 @@
         function openChat() { showSection('chat-section'); loadMessages(); }
         function openPlayers() { showSection('players-section'); loadPlayers(); }
         function openOnlineMenu() { 
-            game.reset(); // Сбрасываем доску перед созданием/выбором онлайн игры
+            game.reset(); 
             showSection('online-menu-section'); 
         }
         function openOnlineLobby() { showSection('online-section'); loadOnlineRooms(); }
@@ -272,6 +278,7 @@
             document.getElementById('analysis-panel').style.display = 'block';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
+            document.getElementById('online-controls').style.display = 'none';
 
             renderBoard();
             updateHistoryDisplay();
@@ -281,7 +288,7 @@
         function openGameSection() {
             isOnlineGame = false;
             isAnalysisMode = false;
-            game.reset(); // Сбрасываем доску для игры с ботом
+            game.reset();
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
@@ -290,6 +297,7 @@
             document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'none';
             document.getElementById('undo-btn').style.display = 'none';
+            document.getElementById('online-controls').style.display = 'none';
         }
 
         async function resetGameMenu() {
@@ -300,7 +308,7 @@
             isOnlineGame = false;
             isAnalysisMode = false;
             activeRoomId = null;
-            game.reset(); // Сбрасываем доску при возврате в зал
+            game.reset();
             showSection('game-hall');
         }
 
@@ -322,6 +330,7 @@
             document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
+            document.getElementById('online-controls').style.display = 'none';
 
             renderBoard();
             updateHistoryDisplay();
@@ -418,12 +427,12 @@
                 }
                 let username = currentUser.user_metadata?.username || 'Игрок';
 
-                game.reset(); // Гарантированно сбрасываем доску в начальное положение для онлайн-игры
+                game.reset(); 
                 await supabaseClient.from('rooms').delete().eq('host', username).eq('status', 'waiting');
 
                 let { data, error } = await supabaseClient
                     .from('rooms')
-                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor }])
+                    .insert([{ host: username, fen: game.fen(), status: 'waiting', host_color: playerColor, message: '' }])
                     .select()
                     .single();
 
@@ -480,6 +489,8 @@
             document.getElementById('analysis-panel').style.display = 'none';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'none';
+            document.getElementById('online-controls').style.display = 'flex';
+            document.getElementById('online-controls').style.gap = '5px';
             renderBoard();
         }
 
@@ -490,7 +501,40 @@
                     game.load(payload.payload.fen);
                     renderBoard();
                     updateHistoryDisplay();
-                }).subscribe();
+                })
+                .on('broadcast', { event: 'resign' }, payload => {
+                    alert(`Соперник сдался! Вы победили 🎉`);
+                    resetGameMenu();
+                })
+                .on('broadcast', { event: 'draw_offer' }, payload => {
+                    if (confirm('Соперник предлагает ничью. Согласны?')) {
+                        onlineChannel.send({ type: 'broadcast', event: 'draw_accept', payload: {} });
+                        alert('Ничья согласна!');
+                        resetGameMenu();
+                    }
+                })
+                .on('broadcast', { event: 'draw_accept' }, payload => {
+                    alert('Ничья принята!');
+                    resetGameMenu();
+                })
+                .subscribe();
+        }
+
+        function resignGame() {
+            if (!confirm('Вы уверены, что хотите сдаться?')) return;
+            if (onlineChannel) {
+                onlineChannel.send({ type: 'broadcast', event: 'resign', payload: {} });
+            }
+            alert('Вы сдались. Победа соперника.');
+            resetGameMenu();
+        }
+
+        function proposeDraw() {
+            if (!confirm('Предложить ничью сопернику?')) return;
+            if (onlineChannel) {
+                onlineChannel.send({ type: 'broadcast', event: 'draw_offer', payload: {} });
+                alert('Предложение ничьей отправлено.');
+            }
         }
 
         function renderBoard() {
@@ -610,7 +654,7 @@
             if (!input.value.trim()) return;
             let name = currentUser ? (currentUser.user_metadata?.username || currentUser.email) : 'Гость';
             await supabaseClient.from('messages').insert([{ username: name, content: input.value.trim() }]);
-            input.value = '';
+            input.value = ``;
             loadMessages();
         }
 
