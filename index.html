@@ -297,7 +297,7 @@
 
             try {
                 let fen = encodeURIComponent(game.fen());
-                let res = await fetch(`url?id=9api/cloud-eval?fen=${fen}`);
+                let res = await fetch(`api/cloud-eval?fen=${fen}`);
                 let data = await res.json();
 
                 if (data && data.pvs && data.pvs.length > 0) {
@@ -348,14 +348,31 @@
         }
 
         async function createOnlineGame() {
-            if (!currentUser) return alert('Войдите в аккаунт!');
-            let username = currentUser.user_metadata?.username || 'Игрок';
-            let { data } = await supabaseClient.from('rooms').insert([{ host: username, fen: game.fen(), status: 'waiting' }]).select().single();
-            activeRoomId = data.id;
-            playerColor = 'white';
-            isOnlineGame = true;
-            setupOnlineChannel(activeRoomId);
-            startOnlineUI();
+            try {
+                if (!currentUser) {
+                    alert('Войдите в аккаунт!');
+                    return;
+                }
+                let username = currentUser.user_metadata?.username || 'Игрок';
+                let { data, error } = await supabaseClient
+                    .from('rooms')
+                    .insert([{ host: username, fen: game.fen(), status: 'waiting' }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    alert('Ошибка Supabase: ' + error.message);
+                    return;
+                }
+
+                activeRoomId = data.id;
+                playerColor = 'white';
+                isOnlineGame = true;
+                setupOnlineChannel(activeRoomId);
+                startOnlineUI();
+            } catch (err) {
+                alert('Критическая ошибка: ' + err.message);
+            }
         }
 
         async function loadOnlineRooms() {
