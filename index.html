@@ -188,6 +188,7 @@
         let isAnalysisMode = false;
         let activeRoomId = null;
         let onlineChannel = null;
+        let waitingInterval = null; // Таймер для проверки комнаты
 
         const pieceSymbols = {
             'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
@@ -252,6 +253,7 @@
 
         async function handleLogout() {
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
+            if (waitingInterval) clearInterval(waitingInterval);
             await supabaseClient.auth.signOut();
             location.reload();
         }
@@ -309,6 +311,7 @@
         }
 
         async function resetGameMenu() {
+            if (waitingInterval) clearInterval(waitingInterval);
             if (isOnlineGame && activeRoomId) {
                 await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             }
@@ -321,6 +324,7 @@
         }
 
         async function cancelWaitingRoom() {
+            if (waitingInterval) clearInterval(waitingInterval);
             if (activeRoomId) {
                 await supabaseClient.from('rooms').delete().eq('id', activeRoomId);
             }
@@ -462,7 +466,7 @@
                 activeRoomId = data.id;
                 isOnlineGame = true;
                 
-                // Переходим в зал ожидания вместо доски
+                // Переходим в зал ожидания
                 showSection('waiting-room-section');
                 setupHostWaitingChannel(activeRoomId);
             } catch (err) {
@@ -500,16 +504,23 @@
             }
         }
 
-        // Канал для хоста в зале ожидания: слушает изменение статуса комнаты на 'playing'
+        // Надежная проверка для хоста (опрашивает базу каждые 1.5 секунды)
         function setupHostWaitingChannel(id) {
+            if (waitingInterval) clearInterval(waitingInterval);
+            
+            waitingInterval = setInterval(async () => {
+                let { data } = await supabaseClient.from('rooms').select('status, fen').eq('id', id).single();
+                if (data && data.status === 'playing') {
+                    clearInterval(waitingInterval);
+                    if (data.fen) game.load(data.fen);
+                    startOnlineUI();
+                    setupOnlineChannel(id);
+                }
+            }, 1500);
+
+            // WebSocket для ходов и событий матча
             if (onlineChannel) supabaseClient.removeChannel(onlineChannel);
             onlineChannel = supabaseClient.channel(`room_${id}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${id}` }, payload => {
-                    if (payload.new.status === 'playing') {
-                        startOnlineUI();
-                        setupOnlineChannel(id); // переключаемся на игровой канал для ходов
-                    }
-                })
                 .on('broadcast', { event: 'move' }, payload => {
                     game.load(payload.payload.fen);
                     renderBoard();
@@ -534,6 +545,7 @@
         }
 
         function startOnlineUI() {
+            if (waitingInterval) clearInterval(waitingInterval);
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Онлайн Партия';
             document.getElementById('step-color').style.display = 'none';
