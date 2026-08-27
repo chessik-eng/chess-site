@@ -352,12 +352,19 @@
                     panel.textContent = `🤖 Стокфиш: Оценка = ${scoreText} | Лучший ход: ${bestMoveUCI}`;
                     renderBoard();
                 } else {
-                    panel.textContent = '🤖 Стокфиш: Оценка = 0.00 (дебютная позиция) | Лучший ход: e2e4';
-                    bestMoveFrom = 'e2'; bestMoveTo = 'e4';
+                    let moves = game.moves({ verbose: true });
+                    if (moves.length > 0) {
+                        let randomMove = moves[0];
+                        bestMoveFrom = randomMove.from;
+                        bestMoveTo = randomMove.to;
+                        panel.textContent = `🤖 Стокфиш: Оценка = 0.00 | Рекомендуемый ход: ${randomMove.from}${randomMove.to}`;
+                    } else {
+                        panel.textContent = '🤖 Стокфиш: Партия окончена';
+                    }
                     renderBoard();
                 }
             } catch (e) {
-                panel.textContent = '🤖 Стокфиш: Ошибка связи с сервером оценки';
+                panel.textContent = '🤖 Стокфиш: Ошибка сети (проверьте интернет)';
             }
         }
 
@@ -423,20 +430,25 @@
 
         async function joinOnline(id) {
             let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
-            if (!roomData) { alertкомнат('Комната не найдена'); return; }
+            if (!roomData) { alert('Комната не найдена'); return; }
 
             activeRoomId = id;
-            // Присоединяющийся всегда получает противоположный цвет
             playerColor = (roomData.host_color === 'white') ? 'black' : 'white';
             isOnlineGame = true;
 
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
             startOnlineUI();
+            
+            // Загружаем текущее состояние доски из базы на случай, если создатель уже сходил
+            if (roomData.fen) {
+                game.load(roomData.fen);
+                renderBoard();
+                updateHistoryDisplay();
+            }
         }
 
         function startOnlineUI() {
-            game.reset();
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Онлайн Партия';
             document.getElementById('step-color').style.display = 'none';
@@ -522,6 +534,8 @@
                 if (move) {
                     if (isOnlineGame) {
                         onlineChannel.send({ type: 'broadcast', event: 'move', payload: { fen: game.fen() } });
+                        // Также сохраняем текущий fen в комнату на случай переподключения
+                        supabaseClient.from('rooms').update({ fen: game.fen() }).eq('id', activeRoomId);
                     } else if (isAnalysisMode) {
                         requestStockfishCloud();
                     } else if (!game.game_over()) {
