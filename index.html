@@ -605,11 +605,19 @@
             gameTimeLimit = parseInt(document.getElementById('timeControlSelect').value);
             whiteTime = gameTimeLimit; blackTime = gameTimeLimit;
             game.reset();
+            
             let { data, error } = await supabaseClient.from('rooms').insert([{ 
                 host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual', time_limit: gameTimeLimit 
             }]).select().single();
-            if (error) return;
-            activeRoomId = data.id; isOnlineGame = true;
+            
+            if (error) {
+                alert('Ошибка создания игры: ' + error.message);
+                return;
+            }
+            
+            activeRoomId = data.id; 
+            isOnlineGame = true;
+            
             showSection('waiting-room-section');
             setupHostWaitingChannel(activeRoomId);
         }
