@@ -775,23 +775,38 @@
             renderBoard(); updateHistoryDisplay();
         }
 
-        // --- ОБЩИЙ ЧАТ (Без единиц и системных багов) ---
+        // --- БЕЗОПАСНЫЙ ОБЩИЙ ЧАТ (без всплывающих окон) ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
-            let { data } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
-            box.innerHTML = '';
+            box.innerHTML = '<div>Загрузка...</div>';
             
-            let validMessages = data?.filter(m => m.content !== '1' && m.username !== '1') || [];
+            try {
+                let { data, error } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
+                if (error) { box.innerHTML = '<div>Ошибка загрузки чата</div>'; return; }
+                
+                box.innerHTML = '';
+                if (!data || data.length === 0) {
+                    box.innerHTML = '<div>Сообщений пока нет...</div>';
+                    return;
+                }
 
-            if (validMessages.length === 0) {
-                box.innerHTML = '<div>Сообщений пока нет...</div>';
-                return;
+                data.forEach(m => {
+                    // Безопасно конвертируем в строки, чтобы исключить любые функции/объекты
+                    let name = String(m.username || 'Игрок');
+                    let text = String(m.content || '');
+                    
+                    // На всякий случай пропускаем «1», если она застряла в базе
+                    if (text !== '1' && name !== '1') {
+                        let div = document.createElement('div');
+                        div.style.marginBottom = '4px';
+                        div.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
+                        box.appendChild(div);
+                    }
+                });
+                box.scrollTop = box.scrollHeight;
+            } catch (err) {
+                box.innerHTML = '<div>Ошибка соединения</div>';
             }
-            validMessages.forEach(m => {
-                let name = m.username || 'Игрок';
-                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${name}:</b> ${m.content}</div>`;
-            });
-            box.scrollTop = box.scrollHeight;
         }
 
         async function loadPlayers() {
@@ -799,7 +814,7 @@
             let { data } = await supabaseClient.from('messages').select('username');
             box.innerHTML = '';
             
-            let names = data?.map(i => i.username).filter(n => n && n !== '1') || [];
+            let names = data?.map(i => String(i.username || '')).filter(n => n && n !== '1') || [];
             
             if (names.length === 0) {
                 box.innerHTML = '<div>Нет активных игроков</div>';
@@ -807,7 +822,10 @@
             }
 
             [...new Set(names)].forEach(n => {
-                box.innerHTML += `<div style="margin-bottom: 5px;"><b>${n}</b> — 🟢 Онлайн</div>`;
+                let div = document.createElement('div');
+                div.style.marginBottom = '5px';
+                div.innerHTML = `<b>${escapeHtml(n)}</b> — 🟢 Онлайн`;
+                box.appendChild(div);
             });
         }
 
@@ -818,9 +836,13 @@
             
             let name = currentUser?.user_metadata?.username || (currentUser?.email ? currentUser.email.split('@')[0] : 'Игрок');
 
-            await supabaseClient.from('messages').insert([{ username: name, content: text }]);
+            await supabaseClient.from('messages').insert([{ username: String(name), content: String(text) }]);
             input.value = '';
             loadMessages();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         window.onload = () => {
