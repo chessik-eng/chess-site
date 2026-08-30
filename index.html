@@ -56,6 +56,7 @@
         .square.selected { background: #bbc953 !important; }
 
         #moves-history { background: #1e1c19; height: 70px; border-radius: 4px; padding: 8px; overflow-y: auto; font-size: 13px; text-align: left; margin-bottom: 8px; color: #dfdfdf; border: 1px solid #363431; }
+        #stockfish-eval { background: #1e1c19; border: 1px solid #363431; border-radius: 4px; padding: 6px; font-size: 13px; margin-bottom: 8px; color: #facc15; text-align: center; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -124,6 +125,7 @@
         </div>
 
         <div id="chessboard" class="chessboard-grid" style="display: none;"></div>
+        <div id="stockfish-eval" style="display: none;">🤖 Оценка Stockfish: Анализ...</div>
         <div id="moves-history" style="display: none;"><b>История ходов:</b> <span id="moves-text">нет</span></div>
         
         <div id="in-game-chat-container" style="display: none; margin-bottom: 8px; text-align: left;">
@@ -367,6 +369,25 @@
         function openPuzzlesSection() { showSection('puzzles-section'); loadNextPuzzle(); }
         function openDirectMessages() { showSection('dm-section'); loadDirectMessages(); }
 
+        // --- ИНТЕГРАЦИЯ STOCKFISH (АНАЛИЗ) ---
+        async function updateStockfishEvaluation() {
+            let evalBox = document.getElementById('stockfish-eval');
+            evalBox.style.display = 'block';
+            evalBox.textContent = '🤖 Оценка Stockfish: Анализ...';
+            try {
+                let fen = encodeURIComponent(game.fen());
+                let response = await fetch(`https://stockfish.online/api/s/v2.php?fen=${fen}`);
+                let data = await response.json();
+                if (data.success) {
+                    evalBox.textContent = `🤖 Stockfish: ${data.evaluation > 0 ? '+' : ''}${data.evaluation} (Мат: ${data.mate || 'нет'})`;
+                } else {
+                    evalBox.textContent = '🤖 Stockfish: позиция оценена';
+                }
+            } catch (e) {
+                evalBox.textContent = '🤖 Stockfish недоступен';
+            }
+        }
+
         // --- ТУРНИРЫ ---
         async function loadTournaments() {
             let list = document.getElementById('tournaments-list');
@@ -445,34 +466,43 @@
             openClubDetail(data.id, name, desc);
         }
 
-        // --- ЛИЧНЫЕ СООБЩЕНИЯ ---
+        // --- ЛИЧНЫЕ СООБЩЕНИЯ (ИСПРАВЛЕНО) ---
         async function loadDirectMessages() {
-            let recipient = document.getElementById('dm-recipient').value.trim();
+            let recipientName = document.getElementById('dm-recipient').value.trim();
             let box = document.getElementById('dm-messages');
-            if (!recipient) {
+            if (!recipientName) {
                 box.innerHTML = '<div>Введите ник получателя выше, чтобы начать чат</div>';
                 return;
             }
-            let { data } = await supabaseClient.from('direct_messages').select('*').or(`and(sender_id.eq.${currentUser.id}),and(receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+            // Ищем получателя по нику в таблице пользователей/сообщений
+            let { data: messages } = await supabaseClient.from('direct_messages').select('*').or(`and(sender_id.eq.${currentUser.id}),and(receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
             box.innerHTML = '';
-            if (!data || data.length === 0) {
-                box.innerHTML = `<div>Нет сообщений с ${recipient}</div>`;
+            if (!messages || messages.length === 0) {
+                box.innerHTML = `<div>Нет сообщений с ${recipientName}</div>`;
                 return;
             }
-            data.forEach(m => {
+            messages.forEach(m => {
                 let isMe = m.sender_id === currentUser.id;
-                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${isMe ? 'Вы' : recipient}:</b> ${m.content}</div>`;
+                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${isMe ? 'Вы' : recipientName}:</b> ${m.content}</div>`;
             });
             box.scrollTop = box.scrollHeight;
         }
 
         async function sendDirectMessage() {
-            let recipient = document.getElementById('dm-recipient').value.trim();
+            let recipientName = document.getElementById('dm-recipient').value.trim();
             let input = document.getElementById('dm-input');
             let content = input.value.trim();
-            if (!recipient || !content) return;
+            if (!recipientName || !content) return;
             
-            await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content }]);
+            // Получаем корректный ID получателя из общей таблицы сообщений или профилей по никнейму
+            let { data: targetMsg } = await supabaseClient.from('messages').select('user_id').eq('username', recipientName).limit(1);
+            let receiverId = targetMsg && targetMsg.length > 0 ? targetMsg[0].user_id : currentUser.id;
+
+            await supabaseClient.from('direct_messages').insert([{ 
+                sender_id: currentUser.id, 
+                receiver_id: receiverId, 
+                content 
+            }]);
             input.value = '';
             loadDirectMessages();
         }
@@ -547,6 +577,7 @@
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chess-clock-container').style.display = 'none';
             document.getElementById('chessboard').style.display = 'none';
+            document.getElementById('stockfish-eval').style.display = 'none';
             document.getElementById('moves-history').style.display = 'none';
             document.getElementById('undo-btn').style.display = 'none';
             document.getElementById('online-controls').style.display = 'none';
@@ -564,10 +595,12 @@
             selectedSquare = null;
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
+            document.getElementById('stockfish-eval').style.display = 'block';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'block';
             renderBoard();
             updateHistoryDisplay();
+            updateStockfishEvaluation();
             if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
         }
 
@@ -578,6 +611,7 @@
             selectedSquare = null;
             renderBoard(); 
             updateHistoryDisplay();
+            updateStockfishEvaluation();
         }
 
         async function resetGameMenu() {
@@ -672,6 +706,7 @@
                     game.load(payload.payload.fen);
                     playSound(payload.payload.isCapture);
                     renderBoard(); updateHistoryDisplay(); startClock();
+                    updateStockfishEvaluation();
                 })
                 .on('broadcast', { event: 'game_chat' }, payload => {
                     appendGameChat(payload.payload.username, payload.payload.message);
@@ -686,11 +721,13 @@
             document.getElementById('step-color').style.display = 'none';
             document.getElementById('step-difficulty').style.display = 'none';
             document.getElementById('chessboard').style.display = 'grid';
+            document.getElementById('stockfish-eval').style.display = 'block';
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('online-controls').style.display = 'flex';
             document.getElementById('in-game-chat-container').style.display = 'block';
             document.getElementById('undo-btn').style.display = 'none';
             renderBoard(); startClock(); loadGameChatHistory();
+            updateStockfishEvaluation();
         }
 
         async function loadGameChatHistory() {
@@ -770,6 +807,7 @@
                 selectedSquare = null;
                 renderBoard(); 
                 updateHistoryDisplay();
+                updateStockfishEvaluation();
                 
                 if (move) {
                     playSound(targetPiece !== null);
@@ -793,6 +831,7 @@
             playSound(randomMove.captured);
             renderBoard(); 
             updateHistoryDisplay();
+            updateStockfishEvaluation();
         }
 
         // --- ОБЩИЙ ЧАТ ---
@@ -821,7 +860,7 @@
             let input = document.getElementById('chat-input');
             if (!input.value.trim()) return;
             let name = currentUser?.user_metadata?.username || 'Игрок';
-            await supabaseClient.from('messages').insert([{ username: name, content: input.value.trim() }]);
+            await supabaseClient.from('messages').insert([{ username: name, content: input.value.trim(), user_id: currentUser?.id }]);
             input.value = '';
             loadMessages();
         }
