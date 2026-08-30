@@ -68,8 +68,8 @@
         <input type="email" id="email" placeholder="Электронная почта">
         <input type="text" id="username" placeholder="Придумайте ник">
         <input type="password" id="password" placeholder="Пароль">
-        <button type="button" class="btn-login" onclick="handleLogin();">Войти</button>
-        <button type="button" class="btn-reg" onclick="handleRegister();">Регистрация</button>
+        <button class="btn-login" onclick="handleLogin();">Войти</button>
+        <button class="btn-reg" onclick="handleRegister();">Регистрация</button>
         <div id="message" style="font-size: 14px; margin-top: 10px; color: #ef4444;"></div>
     </div>
 
@@ -77,16 +77,16 @@
     <div class="card section" id="game-hall">
         <h2>Главный Зал</h2>
         <p id="welcome-user" style="margin-bottom: 15px; color: #629924; font-weight: bold;"></p>
-        <button type="button" class="btn-login" onclick="openBotMenu();">Игра с ботом</button>
-        <button type="button" class="online-btn" onclick="openOnlineMenu();">Играть онлайн (Лобби)</button>
-        <button type="button" class="purple-btn" onclick="openTournamentsSection();">🏆 Турниры</button>
-        <button type="button" class="bot-btn" onclick="openClubsSection();">🏰 Клубы</button>
-        <button type="button" class="btn-reg" onclick="openPuzzlesSection();">🧩 Шахматные задачи</button>
-        <button type="button" class="btn-reg" onclick="openChat();">Общий чат</button>
-        <button type="button" class="online-btn" onclick="openDirectMessages();">💬 Личные сообщения</button>
-        <button type="button" class="btn-reg" onclick="openPlayers();">Игроки</button>
-        <button type="button" class="btn-reg" onclick="openMyProfile();">Профиль</button>
-        <button type="button" class="btn-logout" onclick="handleLogout();">Выйти</button>
+        <button class="btn-login" onclick="openBotMenu();">Игра с ботом</button>
+        <button class="online-btn" onclick="openOnlineMenu();">Играть онлайн (Лобби)</button>
+        <button class="purple-btn" onclick="openTournamentsSection();">🏆 Турниры</button>
+        <button class="bot-btn" onclick="openClubsSection();">🏰 Клубы</button>
+        <button class="btn-reg" onclick="openPuzzlesSection();">🧩 Шахматные задачи</button>
+        <button class="btn-reg" onclick="openChat();">Общий чат</button>
+        <button class="online-btn" onclick="openDirectMessages();">💬 Личные сообщения</button>
+        <button class="btn-reg" onclick="openPlayers();">Игроки</button>
+        <button class="btn-reg" onclick="openMyProfile();">Профиль</button>
+        <button class="btn-logout" onclick="handleLogout();">Выйти</button>
     </div>
 
     <!-- Зал ожидания соперника -->
@@ -94,7 +94,7 @@
         <h2>Поиск соперника</h2>
         <p style="font-size: 14px; margin-bottom: 20px; color: #facc15;">Заявка создана. Ожидаем подключения второго игрока...</p>
         <div style="font-size: 40px; margin-bottom: 20px;">⏳</div>
-        <button type="button" class="btn-back" onclick="cancelWaitingRoom();">Отменить поиск</button>
+        <button class="btn-back" onclick="cancelWaitingRoom();">Отменить поиск</button>
     </div>
 
     <!-- Игровое поле -->
@@ -104,18 +104,18 @@
         <div id="step-color">
             <p style="font-size: 14px; margin-bottom: 10px; color: #facc15;">За какой цвет хотите играть?</p>
             <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                <button type="button" class="color-btn" onclick="chooseColor('white');">Белые</button>
-                <button type="button" class="color-btn" onclick="chooseColor('black');">Чёрные</button>
-                <button type="button" class="color-btn" onclick="chooseColor('random');">Случайный</button>
+                <button class="color-btn" onclick="chooseColor('white');">Белые</button>
+                <button class="color-btn" onclick="chooseColor('black');">Чёрные</button>
+                <button class="color-btn" onclick="chooseColor('random');">Случайный</button>
             </div>
         </div>
 
         <div id="step-difficulty" style="display: none;">
             <p style="font-size: 14px; margin-bottom: 10px; color: #facc15;">Выберите сложность бота:</p>
             <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                <button type="button" class="bot-btn" onclick="startBotGame('easy');">1. Лёгкий</button>
-                <button type="button" class="bot-btn" onclick="startBotGame('medium');">2. Средний</button>
-                <button type="button" class="bot-btn" onclick="startBotGame('hard');">3. Сложный</button>
+                <button class="bot-btn" onclick="startBotGame('easy');">1. Лёгкий</button>
+                <button class="bot-btn" onclick="startBotGame('medium');">2. Средний</button>
+                <button class="bot-btn" onclick="startBotGame('hard');">3. Сложный</button>
             </div>
         </div>
 
@@ -133,16 +133,16 @@
             <div class="chat-box" id="in-game-messages" style="height: 80px; margin-bottom: 5px;"></div>
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="game-chat-input" placeholder="Сообщение..." style="margin: 0;">
-                <button type="button" class="btn-login" style="width: 80px; margin: 0;" onclick="sendGameChatMessage();">Отправить</button>
+                <button class="btn-login" style="width: 80px; margin: 0;" onclick="sendGameChatMessage();">Отправить</button>
             </div>
         </div>
 
-        <button type="button" id="undo-btn" class="btn-undo" style="display: none;" onclick="undoMove();">↩️ Вернуть ход</button>
+        <button id="undo-btn" class="btn-undo" style="display: none;" onclick="undoMove();">↩️ Вернуть ход</button>
         <div id="online-controls" style="display: none; margin-bottom: 8px; gap: 5px;">
-            <button type="button" class="btn-draw" onclick="proposeDraw();">🤝 Ничья</button>
-            <button type="button" class="btn-resign" onclick="resignGame();">🏳️ Сдаться</button>
+            <button class="btn-draw" onclick="proposeDraw();">🤝 Ничья</button>
+            <button class="btn-resign" onclick="resignGame();">🏳️ Сдаться</button>
         </div>
-        <button type="button" class="btn-back" onclick="resetGameMenu();">Назад в зал</button>
+        <button class="btn-back" onclick="resetGameMenu();">Назад в зал</button>
     </div>
 
     <!-- Онлайн меню с выбором времени -->
@@ -163,34 +163,34 @@
         </div>
         <p style="font-size: 14px; margin-bottom: 10px; color: #facc15;">Выберите цвет фигуры:</p>
         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
-            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('white');">Белые</button>
-            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('black');">Чёрные</button>
-            <button type="button" class="color-btn" onclick="createOnlineGameWithColor('random');">Случайный</button>
+            <button class="color-btn" onclick="createOnlineGameWithColor('white');">Белые</button>
+            <button class="color-btn" onclick="createOnlineGameWithColor('black');">Чёрные</button>
+            <button class="color-btn" onclick="createOnlineGameWithColor('random');">Случайный</button>
         </div>
-        <button type="button" class="online-btn" onclick="openOnlineLobby();">Перейти к списку лобби</button>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="online-btn" onclick="openOnlineLobby();">Перейти к списку лобби</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Онлайн лобби -->
     <div class="card section" id="online-section">
         <h2>Открытые вызовы</h2>
-        <button type="button" class="online-btn" onclick="showSection('online-menu-section');">Создать новую игру</button>
+        <button class="online-btn" onclick="showSection('online-menu-section');">Создать новую игру</button>
         <div class="players-box" id="online-games-list" style="margin-top: 15px;"><div>Поиск игр...</div></div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Турниры -->
     <div class="card section" id="tournaments-section">
         <h2>Турниры Клуба</h2>
         <div class="players-box" id="tournaments-list" style="margin-top: 15px;"><div>Загрузка турниров...</div></div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Клубы -->
     <div class="card section" id="clubs-section">
         <h2>Клубы</h2>
         <div class="players-box" id="clubs-list" style="margin-top: 15px;"><div>Загрузка клубов...</div></div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Страница конкретного клуба -->
@@ -199,7 +199,7 @@
         <p id="club-detail-desc" style="font-size: 14px; color: #facc15; margin-bottom: 15px; text-align: left;"></p>
         <div style="font-size: 13px; color: #bababa; text-align: left; margin-bottom: 5px;">Участники клуба:</div>
         <div class="players-box" id="club-members-list"><div>Загрузка участников...</div></div>
-        <button type="button" class="btn-back" onclick="openClubsSection();">Назад к клубам</button>
+        <button class="btn-back" onclick="openClubsSection();">Назад к клубам</button>
     </div>
 
     <!-- Шахматные задачи -->
@@ -207,8 +207,8 @@
         <h2>Тактические задачи</h2>
         <p id="puzzle-status" style="font-size: 14px; color: #facc15; margin-bottom: 10px;">Найдите лучший ход!</p>
         <div id="puzzle-chessboard" class="chessboard-grid"></div>
-        <button type="button" class="btn-login" onclick="loadNextPuzzle();">Следующая задача</button>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-login" onclick="loadNextPuzzle();">Следующая задача</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Личные сообщения -->
@@ -218,9 +218,9 @@
         <div class="chat-box" id="dm-messages"><div>Введите ник получателя и начните переписку</div></div>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="dm-input" placeholder="Введите сообщение..." style="margin:0;">
-            <button type="button" class="btn-login" style="width: 100px; margin:0;" onclick="sendDirectMessage();">Отправить</button>
+            <button class="btn-login" style="width: 100px; margin:0;" onclick="sendDirectMessage();">Отправить</button>
         </div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');" style="margin-top: 10px;">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');" style="margin-top: 10px;">Назад в зал</button>
     </div>
 
     <!-- Общий чат -->
@@ -228,22 +228,22 @@
         <h2>Общий Чат</h2>
         <div class="chat-box" id="chat-messages"><div>Загрузка...</div></div>
         <input type="text" id="chat-input" placeholder="Введите сообщение...">
-        <button type="button" class="btn-login" id="send-btn">Отправить</button>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-login" id="send-btn">Отправить</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Игроки -->
     <div class="card section" id="players-section">
         <h2>Игроки клуба</h2>
         <div class="players-box" id="players-list"><div>Загрузка...</div></div>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <!-- Профиль -->
     <div class="card section" id="profile-section">
         <h2>Профиль игрока</h2>
         <p id="profile-info" style="line-height: 1.6;"></p>
-        <button type="button" class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
+        <button class="btn-back" onclick="showSection('game-hall');">Назад в зал</button>
     </div>
 
     <script>
