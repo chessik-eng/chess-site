@@ -294,7 +294,6 @@
 
         async function handleTimeout(winnerColor) {
             if (clockInterval) clearInterval(clockInterval);
-            alert(`Время вышло! Победили ${winnerColor === 'white' ? 'Белые' : 'Черные'}`);
             if (isOnlineGame) { await finalizeGameOnServer(winnerColor); resetGameMenu(); }
         }
 
@@ -387,18 +386,18 @@
         }
 
         async function createTournamentPrompt() {
-            if (!currentUser) { alert('Сначала войдите в аккаунт!'); return; }
+            if (!currentUser) return;
             let title = prompt('Название турнира:');
             if (!title) return;
             let format = prompt('Формат турнира (arena / swiss):', 'arena') || 'arena';
             let { data, error } = await supabaseClient.from('tournaments').insert([{ title, format, status: 'pending' }]).select().single();
-            if (error) { console.error('Ошибка создания:', error.message); return; }
+            if (error) return;
             await supabaseClient.from('tournament_participants').insert([{ tournament_id: data.id, user_id: currentUser.id }]);
             loadTournaments();
         }
 
         async function joinTournament(id) {
-            if (!currentUser) { alert('Войдите в аккаунт'); return; }
+            if (!currentUser) return;
             await supabaseClient.from('tournament_participants').insert([{ tournament_id: id, user_id: currentUser.id }]);
             loadTournaments();
         }
@@ -410,7 +409,9 @@
             if (error || !data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет. Создайте первый!</div>'; return; }
             list.innerHTML = '';
             data.forEach(c => {
-                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openClubDetail('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${(c.description || '').replace(/'/g, "\\'")}')"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="event.stopPropagation(); openClubDetail('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${(c.description || '').replace(/'/g, "\\'")}')">Открыть</button></div>`;
+                let safeName = c.name.replace(/'/g, "\\'");
+                let safeDesc = (c.description || '').replace(/'/g, "\\'");
+                list.innerHTML += `<div style="background:#1e1c19; padding:8px; border-radius:4px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openClubDetail('${c.id}', '${safeName}', '${safeDesc}')"><span><b>${c.name}</b> — ${c.description || ''}</span> <button class="bot-btn" style="width:auto; padding:3px 8px; margin:0;" onclick="event.stopPropagation(); openClubDetail('${c.id}', '${safeName}', '${safeDesc}')">Открыть</button></div>`;
             });
         }
 
@@ -433,12 +434,12 @@
         }
 
         async function createClubPrompt() {
-            if (!currentUser) { alert('Сначала войдите в аккаунт!'); return; }
+            if (!currentUser) return;
             let name = prompt('Название клуба:');
             if (!name) return;
             let desc = prompt('Описание клуба:');
             let { data, error } = await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]).select().single();
-            if (error) { console.error('Ошибка создания:', error.message); return; }
+            if (error) return;
             
             await supabaseClient.from('club_members').insert([{ club_id: data.id, user_id: currentUser.id }]);
             openClubDetail(data.id, name, desc);
@@ -469,10 +470,9 @@
             let recipient = document.getElementById('dm-recipient').value.trim();
             let input = document.getElementById('dm-input');
             let content = input.value.trim();
-            if (!recipient || !content) { alert('Укажите получателя и текст сообщения!'); return; }
+            if (!recipient || !content) return;
             
-            let { error } = await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content }]);
-            if (error) { alert('Ошибка отправки: ' + error.message); return; }
+            await supabaseClient.from('direct_messages').insert([{ sender_id: currentUser.id, receiver_id: currentUser.id, content }]);
             input.value = '';
             loadDirectMessages();
         }
@@ -608,7 +608,7 @@
             let { data, error } = await supabaseClient.from('rooms').insert([{ 
                 host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual', time_limit: gameTimeLimit 
             }]).select().single();
-            if (error) { alert('Ошибка: ' + error.message); return; }
+            if (error) return;
             activeRoomId = data.id; isOnlineGame = true;
             showSection('waiting-room-section');
             setupHostWaitingChannel(activeRoomId);
@@ -708,13 +708,12 @@
         }
 
         async function resignGame() {
-            if (!confirm('Сдаться?')) return;
             let opp = playerColor === 'white' ? 'black' : 'white';
             await finalizeGameOnServer(opp);
             resetGameMenu();
         }
 
-        function proposeDraw() { alert('Запрос ничьей отправлен.'); }
+        function proposeDraw() {}
 
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
@@ -776,13 +775,12 @@
             renderBoard(); updateHistoryDisplay();
         }
 
-        // --- ОБЩИЙ ЧАТ (С фильтрацией технической единицы) ---
+        // --- ОБЩИЙ ЧАТ (Без единиц и системных багов) ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             let { data } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
             box.innerHTML = '';
             
-            // Фильтруем мусор вроде единицы
             let validMessages = data?.filter(m => m.content !== '1' && m.username !== '1') || [];
 
             if (validMessages.length === 0) {
