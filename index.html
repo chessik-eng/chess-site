@@ -776,18 +776,22 @@
             renderBoard(); updateHistoryDisplay();
         }
 
-        // --- ОБЩИЙ ЧАТ (Исправлено отображение имен) ---
+        // --- ОБЩИЙ ЧАТ (С фильтрацией технической единицы) ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             let { data } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
             box.innerHTML = '';
-            if (!data || data.length === 0) {
+            
+            // Фильтруем мусор вроде единицы
+            let validMessages = data?.filter(m => m.content !== '1' && m.username !== '1') || [];
+
+            if (validMessages.length === 0) {
                 box.innerHTML = '<div>Сообщений пока нет...</div>';
                 return;
             }
-            data.forEach(m => {
-                let displayName = (!m.username || m.username === '1' || !isNaN(m.username)) ? 'Игрок' : m.username;
-                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${displayName}:</b> ${m.content}</div>`;
+            validMessages.forEach(m => {
+                let name = m.username || 'Игрок';
+                box.innerHTML += `<div style="margin-bottom: 4px;"><b>${name}:</b> ${m.content}</div>`;
             });
             box.scrollTop = box.scrollHeight;
         }
@@ -796,8 +800,15 @@
             let box = document.getElementById('players-list');
             let { data } = await supabaseClient.from('messages').select('username');
             box.innerHTML = '';
-            let validNames = data?.map(i => (!i.username || i.username === '1' || !isNaN(i.username)) ? 'Игрок' : i.username) || [];
-            [...new Set(validNames)].forEach(n => {
+            
+            let names = data?.map(i => i.username).filter(n => n && n !== '1') || [];
+            
+            if (names.length === 0) {
+                box.innerHTML = '<div>Нет активных игроков</div>';
+                return;
+            }
+
+            [...new Set(names)].forEach(n => {
                 box.innerHTML += `<div style="margin-bottom: 5px;"><b>${n}</b> — 🟢 Онлайн</div>`;
             });
         }
@@ -806,7 +817,9 @@
             let input = document.getElementById('chat-input');
             let text = input.value.trim();
             if (!text) return;
-            let name = currentUser?.user_metadata?.username || currentUser?.email?.split('@')[0] || 'Игрок';
+            
+            let name = currentUser?.user_metadata?.username || (currentUser?.email ? currentUser.email.split('@')[0] : 'Игрок');
+
             await supabaseClient.from('messages').insert([{ username: name, content: text }]);
             input.value = '';
             loadMessages();
