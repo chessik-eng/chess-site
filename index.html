@@ -182,7 +182,6 @@
     <!-- Турниры -->
     <div class="card section" id="tournaments-section">
         <h2>Турниры Клуба</h2>
-        <button type="button" class="purple-btn" onclick="createTournamentPrompt()">Создать турнир</button>
         <div class="players-box" id="tournaments-list" style="margin-top: 15px;"><div>Загрузка турниров...</div></div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
@@ -190,7 +189,6 @@
     <!-- Клубы -->
     <div class="card section" id="clubs-section">
         <h2>Клубы</h2>
-        <button type="button" class="bot-btn" onclick="createClubPrompt()">Создать клуб</button>
         <div class="players-box" id="clubs-list" style="margin-top: 15px;"><div>Загрузка клубов...</div></div>
         <button type="button" class="btn-back" onclick="showSection('game-hall')">Назад в зал</button>
     </div>
@@ -369,7 +367,6 @@
         function openPuzzlesSection() { showSection('puzzles-section'); loadNextPuzzle(); }
         function openDirectMessages() { showSection('dm-section'); loadDirectMessages(); }
 
-        // --- ВСТРОЕННЫЙ БАЛАНС СИЛ (АНАЛИЗ ПОЗИЦИИ) ---
         function updateStockfishEvaluation() {
             let evalBox = document.getElementById('stockfish-eval');
             evalBox.style.display = 'block';
@@ -394,14 +391,13 @@
             evalBox.textContent = `🤖 Оценка позиции: ${sign}${diff.toFixed(1)}`;
         }
 
-        // --- ТУРНИРЫ ---
         async function loadTournaments() {
             let list = document.getElementById('tournaments-list');
             let { data: tournaments } = await supabaseClient.from('tournaments').select('*').order('created_at', { ascending: false });
             let { data: myParts } = await supabaseClient.from('tournament_participants').select('tournament_id').eq('user_id', currentUser.id);
             let myTournaments = new Set(myParts?.map(p => p.tournament_id));
 
-            if (!tournaments || tournaments.length === 0) { list.innerHTML = '<div>Нет активных турниров. Создайте свой!</div>'; return; }
+            if (!tournaments || tournaments.length === 0) { list.innerHTML = '<div>Нет активных турниров.</div>'; return; }
             list.innerHTML = '';
             tournaments.forEach(t => {
                 let joined = myTournaments.has(t.id);
@@ -412,28 +408,16 @@
             });
         }
 
-        async function createTournamentPrompt() {
-            if (!currentUser) return;
-            let title = prompt('Название турнира:');
-            if (!title) return;
-            let format = prompt('Формат турнира (arena / swiss):', 'arena') || 'arena';
-            let { data, error } = await supabaseClient.from('tournaments').insert([{ title, format, status: 'pending' }]).select().single();
-            if (error) return;
-            await supabaseClient.from('tournament_participants').insert([{ tournament_id: data.id, user_id: currentUser.id }]);
-            loadTournaments();
-        }
-
         async function joinTournament(id) {
             if (!currentUser) return;
             await supabaseClient.from('tournament_participants').insert([{ tournament_id: id, user_id: currentUser.id }]);
             loadTournaments();
         }
 
-        // --- КЛУБЫ ---
         async function loadClubs() {
             let list = document.getElementById('clubs-list');
             let { data, error } = await supabaseClient.from('clubs').select('*').order('created_at', { ascending: false });
-            if (error || !data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет. Создайте первый!</div>'; return; }
+            if (error || !data || data.length === 0) { list.innerHTML = '<div>Клубов пока нет.</div>'; return; }
             list.innerHTML = '';
             data.forEach(c => {
                 let safeName = c.name.replace(/'/g, "\\'");
@@ -460,19 +444,6 @@
             });
         }
 
-        async function createClubPrompt() {
-            if (!currentUser) return;
-            let name = prompt('Название клуба:');
-            if (!name) return;
-            let desc = prompt('Описание клуба:');
-            let { data, error } = await supabaseClient.from('clubs').insert([{ name, description: desc, created_by: currentUser.id }]).select().single();
-            if (error) return;
-            
-            await supabaseClient.from('club_members').insert([{ club_id: data.id, user_id: currentUser.id }]);
-            openClubDetail(data.id, name, desc);
-        }
-
-        // --- ЛИЧНЫЕ СООБЩЕНИЯ ---
         async function loadDirectMessages() {
             let recipientName = document.getElementById('dm-recipient').value.trim();
             let box = document.getElementById('dm-messages');
@@ -480,10 +451,10 @@
                 box.innerHTML = '<div>Введите ник получателя выше, чтобы начать чат</div>';
                 return;
             }
-            let { data: messages } = await supabaseClient.from('direct_messages').select('*').or(`and(sender_id.eq.${currentUser.id}),and(receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+            let { data: messages } = await supabaseClient.from('direct_messages').select('*').order('created_at', { ascending: true });
             box.innerHTML = '';
             if (!messages || messages.length === 0) {
-                box.innerHTML = `<div>Нет сообщений с ${recipientName}</div>`;
+                box.innerHTML = `<div>Нет сообщений</div>`;
                 return;
             }
             messages.forEach(m => {
@@ -511,7 +482,6 @@
             loadDirectMessages();
         }
 
-        // --- ЗАДАЧИ ---
         async function loadNextPuzzle() {
             let { data } = await supabaseClient.from('puzzles').select('*').limit(5);
             if (!data || data.length === 0) {
@@ -571,7 +541,6 @@
             }
         }
 
-        // --- ИГРА С БОТОМ ---
         function openBotMenu() {
             isOnlineGame = false; 
             game.reset();
@@ -641,7 +610,6 @@
             document.getElementById('moves-text').textContent = notation || 'нет';
         }
 
-        // --- ОНЛАЙН ИГРА ЧЕРЕЗ SUPABASE ---
         async function createOnlineGameWithColor(chosenColor) {
             playerColor = (chosenColor === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : chosenColor;
             let username = currentUser.user_metadata?.username || 'Игрок';
@@ -654,11 +622,7 @@
                 host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual'
             }]).select().single();
             
-            if (error) {
-                alert('Ошибка создания игры: ' + error.message);
-                return;
-            }
-            
+            if (error) return;
             activeRoomId = data.id; 
             isOnlineGame = true;
             
@@ -772,7 +736,6 @@
 
         function proposeDraw() {}
 
-        // --- ОТРИСОВКА И КЛИКИ ПО ДОСКЕ ---
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
             boardEl.innerHTML = '';
@@ -838,7 +801,6 @@
             updateStockfishEvaluation();
         }
 
-        // --- ОБЩИЙ ЧАТ ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             box.innerHTML = '<div>Загрузка...</div>';
