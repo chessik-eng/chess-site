@@ -775,7 +775,7 @@
             renderBoard(); updateHistoryDisplay();
         }
 
-        // --- БЕЗОПАСНЫЙ ОБЩИЙ ЧАТ (без всплывающих окон) ---
+        // --- БЕЗОПАСНЫЙ ОБЩИЙ ЧАТ С КЛИКАБЕЛЬНЫМИ НИКАМИ ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             box.innerHTML = '<div>Загрузка...</div>';
@@ -791,15 +791,28 @@
                 }
 
                 data.forEach(m => {
-                    // Безопасно конвертируем в строки, чтобы исключить любые функции/объекты
                     let name = String(m.username || 'Игрок');
                     let text = String(m.content || '');
                     
-                    // На всякий случай пропускаем «1», если она застряла в базе
                     if (text !== '1' && name !== '1') {
                         let div = document.createElement('div');
-                        div.style.marginBottom = '4px';
-                        div.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
+                        div.style.marginBottom = '6px';
+                        
+                        let nameSpan = document.createElement('span');
+                        nameSpan.style.color = '#629924';
+                        nameSpan.style.cursor = 'pointer';
+                        nameSpan.style.fontWeight = 'bold';
+                        nameSpan.textContent = name;
+                        nameSpan.title = 'Открыть профиль';
+                        nameSpan.onclick = () => {
+                            showUserProfile(name, '', 1200);
+                        };
+
+                        let textSpan = document.createElement('span');
+                        textSpan.textContent = `: ${text}`;
+
+                        div.appendChild(nameSpan);
+                        div.appendChild(textSpan);
                         box.appendChild(div);
                     }
                 });
@@ -823,8 +836,27 @@
 
             [...new Set(names)].forEach(n => {
                 let div = document.createElement('div');
-                div.style.marginBottom = '5px';
-                div.innerHTML = `<b>${escapeHtml(n)}</b> — 🟢 Онлайн`;
+                div.style.marginBottom = '8px';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+
+                let nameSpan = document.createElement('span');
+                nameSpan.innerHTML = `<b>${escapeHtml(n)}</b>`;
+                nameSpan.style.color = '#629924';
+                nameSpan.style.cursor = 'pointer';
+                nameSpan.title = 'Открыть профиль';
+                nameSpan.onclick = () => {
+                    showUserProfile(n, '', 1200);
+                };
+
+                let statusSpan = document.createElement('span');
+                statusSpan.textContent = '🟢 Онлайн';
+                statusSpan.style.fontSize = '12px';
+                statusSpan.style.color = '#888';
+
+                div.appendChild(nameSpan);
+                div.appendChild(statusSpan);
                 box.appendChild(div);
             });
         }
