@@ -76,7 +76,7 @@
     <div class="card section" id="game-hall">
         <h2>Главный Зал</h2>
         <p id="welcome-user" style="margin-bottom: 15px; color: #629924; font-weight: bold;"></p>
-        <button type="button" class="btn-login" onclick="openGameSection()">Игра с ботом</button>
+        <button type="button" class="btn-login" onclick="openBotMenu()">Игра с ботом</button>
         <button type="button" class="online-btn" onclick="openOnlineMenu()">Играть онлайн (Лобби)</button>
         <button type="button" class="purple-btn" onclick="openTournamentsSection()">🏆 Турниры</button>
         <button type="button" class="bot-btn" onclick="openClubsSection()">🏰 Клубы</button>
@@ -96,7 +96,7 @@
         <button type="button" class="btn-back" onclick="cancelWaitingRoom()">Отменить поиск</button>
     </div>
 
-    <!-- Игровое поле / Бот -->
+    <!-- Игровое поле -->
     <div class="card section" id="game-section">
         <h2 id="section-title">Партия</h2>
         
@@ -537,8 +537,10 @@
             }
         }
 
-        function openGameSection() {
-            isOnlineGame = false; game.reset();
+        // --- ИГРА С БОТОМ ---
+        function openBotMenu() {
+            isOnlineGame = false; 
+            game.reset();
             showSection('game-section');
             document.getElementById('section-title').textContent = 'Игра против Бот-Клуба';
             document.getElementById('step-color').style.display = 'block';
@@ -549,6 +551,33 @@
             document.getElementById('undo-btn').style.display = 'none';
             document.getElementById('online-controls').style.display = 'none';
             document.getElementById('in-game-chat-container').style.display = 'none';
+        }
+
+        function chooseColor(color) {
+            playerColor = (color === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : color;
+            document.getElementById('step-color').style.display = 'none';
+            document.getElementById('step-difficulty').style.display = 'block';
+        }
+
+        function startBotGame(difficulty) {
+            game.reset(); 
+            selectedSquare = null;
+            document.getElementById('step-difficulty').style.display = 'none';
+            document.getElementById('chessboard').style.display = 'grid';
+            document.getElementById('moves-history').style.display = 'block';
+            document.getElementById('undo-btn').style.display = 'block';
+            renderBoard();
+            updateHistoryDisplay();
+            if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
+        }
+
+        function undoMove() {
+            if (isOnlineGame) return;
+            game.undo();
+            if (game.history().length > 0) game.undo();
+            selectedSquare = null;
+            renderBoard(); 
+            updateHistoryDisplay();
         }
 
         async function resetGameMenu() {
@@ -568,36 +597,13 @@
             showSection('game-hall');
         }
 
-        function chooseColor(color) {
-            playerColor = (color === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : color;
-            document.getElementById('step-color').style.display = 'none';
-            document.getElementById('step-difficulty').style.display = 'block';
-        }
-
-        function startBotGame(difficulty) {
-            game.reset(); selectedSquare = null;
-            document.getElementById('step-difficulty').style.display = 'none';
-            document.getElementById('chessboard').style.display = 'grid';
-            document.getElementById('moves-history').style.display = 'block';
-            document.getElementById('undo-btn').style.display = 'block';
-            renderBoard();
-            updateHistoryDisplay();
-            if (playerColor === 'black') window.setTimeout(makeBotMove, 200);
-        }
-
-        function undoMove() {
-            game.undo();
-            if (game.history().length > 0) game.undo();
-            selectedSquare = null;
-            renderBoard(); updateHistoryDisplay();
-        }
-
         function updateHistoryDisplay() {
             let history = game.history(), notation = '';
             for (let i = 0; i < history.length; i += 2) notation += `${Math.floor(i/2) + 1}. ${history[i]} ${history[i+1] || ''} `;
             document.getElementById('moves-text').textContent = notation || 'нет';
         }
 
+        // --- ОНЛАЙН ИГРА ЧЕРЕЗ SUPABASE ---
         async function createOnlineGameWithColor(chosenColor) {
             playerColor = (chosenColor === 'random') ? (Math.random() < 0.5 ? 'white' : 'black') : chosenColor;
             let username = currentUser.user_metadata?.username || 'Игрок';
@@ -628,15 +634,16 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет активных вызовов.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                let timeMin = 5;
-                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b> (${timeMin} мин)</span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
+                listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b></span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
             });
         }
 
         async function joinOnline(id) {
             let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
             if (!roomData) return;
-            activeRoomId = id; playerColor = (roomData.host_color === 'white') ? 'black' : 'white'; isOnlineGame = true;
+            activeRoomId = id; 
+            playerColor = (roomData.host_color === 'white') ? 'black' : 'white'; 
+            isOnlineGame = true;
             gameTimeLimit = 300;
             whiteTime = gameTimeLimit; blackTime = gameTimeLimit;
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
@@ -682,6 +689,7 @@
             document.getElementById('moves-history').style.display = 'block';
             document.getElementById('online-controls').style.display = 'flex';
             document.getElementById('in-game-chat-container').style.display = 'block';
+            document.getElementById('undo-btn').style.display = 'none';
             renderBoard(); startClock(); loadGameChatHistory();
         }
 
@@ -723,6 +731,7 @@
 
         function proposeDraw() {}
 
+        // --- ОТРИСОВКА И КЛИКИ ПО ДОСКЕ ---
         function renderBoard() {
             const boardEl = document.getElementById('chessboard');
             boardEl.innerHTML = '';
@@ -759,7 +768,9 @@
                 let targetPiece = game.get(square);
                 let move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
                 selectedSquare = null;
-                renderBoard(); updateHistoryDisplay();
+                renderBoard(); 
+                updateHistoryDisplay();
+                
                 if (move) {
                     playSound(targetPiece !== null);
                     startClock();
@@ -774,115 +785,45 @@
         }
 
         function makeBotMove() {
-            if (game.game_over()) return;
+            if (game.game_over() || isOnlineGame) return;
             let moves = game.moves({ verbose: true });
             if (moves.length === 0) return;
             let randomMove = moves[Math.floor(Math.random() * moves.length)];
             game.move(randomMove);
             playSound(randomMove.captured);
-            renderBoard(); updateHistoryDisplay();
+            renderBoard(); 
+            updateHistoryDisplay();
         }
 
-        // --- БЕЗОПАСНЫЙ ОБЩИЙ ЧАТ С КЛИКАБЕЛЬНЫМИ НИКАМИ ---
+        // --- ОБЩИЙ ЧАТ ---
         async function loadMessages() {
             let box = document.getElementById('chat-messages');
             box.innerHTML = '<div>Загрузка...</div>';
-            
-            try {
-                let { data, error } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
-                if (error) { box.innerHTML = '<div>Ошибка загрузки чата</div>'; return; }
-                
-                box.innerHTML = '';
-                if (!data || data.length === 0) {
-                    box.innerHTML = '<div>Сообщений пока нет...</div>';
-                    return;
-                }
-
-                data.forEach(m => {
-                    let name = String(m.username || 'Игрок');
-                    let text = String(m.content || '');
-                    
-                    if (text !== '1' && name !== '1') {
-                        let div = document.createElement('div');
-                        div.style.marginBottom = '6px';
-                        
-                        let nameSpan = document.createElement('span');
-                        nameSpan.style.color = '#629924';
-                        nameSpan.style.cursor = 'pointer';
-                        nameSpan.style.fontWeight = 'bold';
-                        nameSpan.textContent = name;
-                        nameSpan.title = 'Открыть профиль';
-                        nameSpan.onclick = () => {
-                            showUserProfile(name, '', 1200);
-                        };
-
-                        let textSpan = document.createElement('span');
-                        textSpan.textContent = `: ${text}`;
-
-                        div.appendChild(nameSpan);
-                        div.appendChild(textSpan);
-                        box.appendChild(div);
-                    }
-                });
-                box.scrollTop = box.scrollHeight;
-            } catch (err) {
-                box.innerHTML = '<div>Ошибка соединения</div>';
-            }
+            let { data } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
+            box.innerHTML = '';
+            data?.forEach(m => {
+                box.innerHTML += `<div style="margin-bottom:6px;"><b>${m.username}:</b> ${m.content}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
         }
 
         async function loadPlayers() {
             let box = document.getElementById('players-list');
             let { data } = await supabaseClient.from('messages').select('username');
             box.innerHTML = '';
-            
-            let names = data?.map(i => String(i.username || '')).filter(n => n && n !== '1') || [];
-            
-            if (names.length === 0) {
-                box.innerHTML = '<div>Нет активных игроков</div>';
-                return;
-            }
-
-            [...new Set(names)].forEach(n => {
-                let div = document.createElement('div');
-                div.style.marginBottom = '8px';
-                div.style.display = 'flex';
-                div.style.justifyContent = 'space-between';
-                div.style.alignItems = 'center';
-
-                let nameSpan = document.createElement('span');
-                nameSpan.innerHTML = `<b>${escapeHtml(n)}</b>`;
-                nameSpan.style.color = '#629924';
-                nameSpan.style.cursor = 'pointer';
-                nameSpan.title = 'Открыть профиль';
-                nameSpan.onclick = () => {
-                    showUserProfile(n, '', 1200);
-                };
-
-                let statusSpan = document.createElement('span');
-                statusSpan.textContent = '🟢 Онлайн';
-                statusSpan.style.fontSize = '12px';
-                statusSpan.style.color = '#888';
-
-                div.appendChild(nameSpan);
-                div.appendChild(statusSpan);
-                box.appendChild(div);
+            let names = [...new Set(data?.map(i => i.username) || [])];
+            names.forEach(n => {
+                box.innerHTML += `<div style="margin-bottom:8px;"><b>${n}</b> — 🟢 Онлайн</div>`;
             });
         }
 
         async function sendMessage() {
             let input = document.getElementById('chat-input');
-            let text = input.value.trim();
-            if (!text) return;
-            
-            let name = currentUser?.user_metadata?.username || (currentUser?.email ? currentUser.email.split('@')[0] : 'Игрок');
-
-            await supabaseClient.from('messages').insert([{ username: String(name), content: String(text) }]);
+            if (!input.value.trim()) return;
+            let name = currentUser?.user_metadata?.username || 'Игрок';
+            await supabaseClient.from('messages').insert([{ username: name, content: input.value.trim() }]);
             input.value = '';
             loadMessages();
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         window.onload = () => {
