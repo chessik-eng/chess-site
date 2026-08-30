@@ -607,7 +607,7 @@
             game.reset();
             
             let { data, error } = await supabaseClient.from('rooms').insert([{ 
-                host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual', time_limit: gameTimeLimit 
+                host: username, host_id: currentUser.id, fen: game.fen(), status: 'waiting', host_color: playerColor, game_type: isRated ? 'rated' : 'casual'
             }]).select().single();
             
             if (error) {
@@ -628,7 +628,7 @@
             if (!data || data.length === 0) { listEl.innerHTML = '<div>Нет активных вызовов.</div>'; return; }
             listEl.innerHTML = '';
             data.forEach(r => {
-                let timeMin = Math.floor((r.time_limit || 300) / 60);
+                let timeMin = 5;
                 listEl.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center; background:#262421; padding:6px; border-radius:4px;"><span><b>${r.host}</b> (${timeMin} мин)</span><button class="bot-btn" style="width:auto; padding:3px 10px; margin:0;" onclick="joinOnline(${r.id})">Принять</button></div>`;
             });
         }
@@ -637,7 +637,7 @@
             let { data: roomData } = await supabaseClient.from('rooms').select('*').eq('id', id).single();
             if (!roomData) return;
             activeRoomId = id; playerColor = (roomData.host_color === 'white') ? 'black' : 'white'; isOnlineGame = true;
-            gameTimeLimit = roomData.time_limit || 300;
+            gameTimeLimit = 300;
             whiteTime = gameTimeLimit; blackTime = gameTimeLimit;
             await supabaseClient.from('rooms').update({ status: 'playing' }).eq('id', id);
             setupOnlineChannel(id);
