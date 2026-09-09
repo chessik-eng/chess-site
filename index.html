@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+from pathlib import Path
+
+out = Path("/mnt/data/chess-club-pro-v3.html")
+
+html = r'''<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -395,3 +399,9 @@ window.addEventListener("load",async()=>{const {data}=await sb.auth.getSession()
 </script>
 </body>
 </html>
+'''
+
+out.write_text(html, encoding="utf-8")
+print(f"Создан полностью переработанный V3: {out}")
+print(f"Размер: {out.stat().st_size:,} байт")
+print("Сохранены Supabase URL/key и основные функции: auth, онлайн-комнаты, бот, часы, чат, ЛС, задачи, турниры, клубы, рейтинг и профиль.")
