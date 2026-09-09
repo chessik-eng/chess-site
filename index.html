@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Шахматный Клуб Pro</title>
+    <title>Chess Club</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -289,7 +289,7 @@
 
 <!-- AUTH -->
 <div class="card section" id="auth-form" style="display:block">
-    <h2>♟ Шахматный Клуб Pro</h2>
+    <h2>♟ Chess Club</h2>
 
     <input type="email" id="email" placeholder="Электронная почта">
     <input type="text" id="username" placeholder="Ник">
@@ -528,6 +528,7 @@
         Открытые вызовы
     </button>
 
+
     <button class="btn-back"
             onclick="showSection('game-hall')">
         Назад
@@ -555,149 +556,6 @@
             onclick="showSection('game-hall')">
         Назад
     </button>
-
-</div>
-
-
-<!-- TOURNAMENTS -->
-<div class="card section" id="tournaments-section">
-
-    <h2>🏆 Турниры</h2>
-
-    <div class="players-box"
-         id="tournaments-list">
-        Загрузка...
-    </div>
-
-    <button class="btn-back"
-            onclick="showSection('game-hall')">
-        Назад
-    </button>
-
-</div>
-
-
-<!-- CLUBS -->
-<div class="card section" id="clubs-section">
-
-    <h2>🏰 Клубы</h2>
-
-    <div class="players-box"
-         id="clubs-list">
-        Загрузка...
-    </div>
-
-    <button class="btn-back"
-            onclick="showSection('game-hall')">
-        Назад
-    </button>
-
-</div>
-
-
-<!-- CLUB -->
-<div class="card section" id="club-detail-section">
-
-    <h2 id="club-detail-name">Клуб</h2>
-
-    <p id="club-detail-desc"></p>
-
-    <div style="text-align:left">
-        Участники:
-    </div>
-
-    <div class="players-box"
-         id="club-members-list">
-        Загрузка...
-    </div>
-
-    <button class="btn-back"
-            onclick="openClubsSection()">
-        Назад
-    </button>
-
-</div>
-
-
-<!-- PUZZLES -->
-<div class="card section" id="puzzles-section">
-
-    <h2>🧩 Тактическая задача</h2>
-
-    <p id="puzzle-status" class="warning">
-        Найдите лучший ход!
-    </p>
-
-    <div id="puzzle-chessboard"
-         class="chessboard-grid">
-    </div>
-
-    <button class="btn-login"
-            onclick="loadNextPuzzle()">
-        Следующая задача
-    </button>
-
-    <button class="btn-back"
-            onclick="showSection('game-hall')">
-        Назад
-    </button>
-
-</div>
-
-
-<!-- DM -->
-<div class="card section" id="dm-section">
-
-    <h2>✉️ Личные сообщения</h2>
-
-    <input id="dm-recipient"
-           placeholder="Ник получателя">
-
-    <button class="online-btn"
-            onclick="loadDirectMessages()">
-        Открыть переписку
-    </button>
-
-    <div class="chat-box"
-         id="dm-messages">
-        Введите ник получателя.
-    </div>
-
-    <div class="row">
-
-        <input id="dm-input"
-               placeholder="Сообщение..."
-               style="margin:0">
-
-        <button class="btn-login"
-                style="max-width:100px"
-                onclick="sendDirectMessage()">
-            Отправить
-        </button>
-
-    </div>
-
-    <button class="btn-back"
-            onclick="showSection('game-hall')">
-        Назад
-    </button>
-
-</div>
-
-
-<!-- CHAT -->
-<div class="card section" id="chat-section">
-
-    <h2>💬 Общий чат</h2>
-
-    <div class="chat-box"
-         id="chat-messages">
-        Загрузка...
-    </div>
-
-    <input id="chat-input"
-           placeholder="Введите сообщение">
-
     <button class="btn-login"
             onclick="sendMessage()">
         Отправить
@@ -1298,115 +1156,7 @@ function startBotGame(difficulty) {
     if (playerColor === "black") {
 
         setTimeout(makeBotMove, 500);
-
-    }
-
-}
-
-
-/* =========================================================
-   BOT ENGINE
-========================================================= */
-
-function makeBotMove() {
-
-    if (
-        gameFinished ||
-        isOnlineGame ||
-        game.game_over()
-    ) {
-        return;
-    }
-
-    const moves =
-        game.moves({
-            verbose: true
-        });
-
-    if (!moves.length) return;
-
-    let selectedMove;
-
-    if (botDifficulty === "easy") {
-
-        selectedMove =
-            moves[
-                Math.floor(
-                    Math.random() * moves.length
-                )
-            ];
-
-    } else {
-
-        const scored =
-            moves.map(move => {
-
-                game.move(move);
-
-                const score =
-                    evaluateMaterial();
-
-                game.undo();
-
-                return {
-                    move,
-                    score
-                };
-
-            });
-
-        if (game.turn() === "b") {
-
-            scored.sort(
-                (a,b) =>
-                    a.score - b.score
-            );
-
-        } else {
-
-            scored.sort(
-                (a,b) =>
-                    b.score - a.score
-            );
-
-        }
-
-        const pool =
-            botDifficulty === "hard"
-                ? scored.slice(
-                    0,
-                    Math.min(3, scored.length)
-                )
-                : scored.slice(
-                    0,
-                    Math.min(6, scored.length)
-                );
-
-        selectedMove =
-            pool[
-                Math.floor(
-                    Math.random() * pool.length
-                )
-            ].move;
-
-    }
-
-    const result =
-        game.move(selectedMove);
-
-    playSound(Boolean(result.captured));
-
-    renderBoard();
-
-    updateHistoryDisplay();
-
-    updatePositionEvaluation();
-
-    updateGameStatus();
-
-}
-
-
+</div>
 /* =========================================================
    EVALUATION
 ========================================================= */
@@ -1738,7 +1488,6 @@ function updateGameStatus() {
         result.textContent = "";
 
         return;
-
     }
 
     gameFinished = true;
@@ -2204,8 +1953,6 @@ async function loadOnlineRooms() {
         });
 
 }
-
-
 /* =========================================================
    WAITING
 ========================================================= */
@@ -2916,86 +2663,92 @@ async function resetGameMenu() {
     openHall();
 
 }
-
-
 /* =========================================================
    GENERAL CHAT
 ========================================================= */
 
-async function openChat() {
-
-    showSection(
-        "chat-section"
-    );
-
-    await loadMessages();
-
-}
-
-
-async function loadMessages() {
+async function loadGeneralChat() {
 
     const box =
         document.getElementById(
-            "chat-messages"
+            "general-chat-messages"
         );
 
-    box.innerHTML =
-        "Загрузка...";
+    if (!box) return;
 
     const { data, error } =
         await supabaseClient
             .from("messages")
-            .select(
-                "username,content,created_at"
-            )
+            .select("*")
             .order(
                 "created_at",
-                { ascending: true }
+                {
+                    ascending: true
+                }
             )
-            .limit(200);
+            .limit(100);
 
     if (error) {
 
-        box.innerHTML =
-            `<div class="error">
-                ${escapeHTML(error.message)}
-             </div>`;
+        console.error(
+            "Chat load error:",
+            error
+        );
 
         return;
     }
 
     box.innerHTML = "";
 
-    if (!data?.length) {
+    (data || []).forEach(
+        message => {
 
-        box.innerHTML =
-            "<div>Сообщений пока нет.</div>";
+            appendGeneralChatMessage(
+                message
+            );
 
-        return;
-    }
+        }
+    );
 
-    data.forEach(message => {
+}
 
-        const line =
-            document.createElement("div");
 
-        line.className =
-            "chat-line";
+function appendGeneralChatMessage(
+    message
+) {
 
-        line.innerHTML = `
+    const box =
+        document.getElementById(
+            "general-chat-messages"
+        );
 
-            <b>
-                ${escapeHTML(message.username)}:
-            </b>
+    if (!box) return;
 
-            ${escapeHTML(message.content)}
+    const div =
+        document.createElement(
+            "div"
+        );
 
-        `;
+    div.className =
+        "chat-message";
 
-        box.appendChild(line);
+    div.innerHTML = `
+        <strong>
+            ${escapeHtml(
+                message.username ||
+                "Игрок"
+            )}
+        </strong>
+        <span>
+            ${escapeHtml(
+                message.content ||
+                message.message ||
+                ""
+            )}
+        </span>
+    `;
 
-    });
+    box.appendChild(div);
 
     box.scrollTop =
         box.scrollHeight;
@@ -3003,40 +2756,56 @@ async function loadMessages() {
 }
 
 
-async function sendMessage() {
+async function sendGeneralChat() {
+
+    if (!currentUser) {
+
+        alert(
+            "Сначала войдите в аккаунт."
+        );
+
+        return;
+    }
 
     const input =
         document.getElementById(
-            "chat-input"
+            "general-chat-input"
         );
 
-    const content =
+    if (!input) return;
+
+    const text =
         input.value.trim();
 
-    if (!content || !currentUser) {
-        return;
-    }
+    if (!text) return;
+
+    const username =
+        usernameOf();
 
     const { error } =
         await supabaseClient
             .from("messages")
-            .insert([{
-
-                username:
-                    usernameOf(),
-
-                content,
+            .insert({
 
                 user_id:
-                    currentUser.id
+                    currentUser.id,
 
-            }]);
+                username,
+
+                content:
+                    text
+
+            });
 
     if (error) {
 
+        console.error(
+            "Chat send error:",
+            error
+        );
+
         alert(
-            "Не удалось отправить сообщение: " +
-            error.message
+            "Не удалось отправить сообщение."
         );
 
         return;
@@ -3044,77 +2813,152 @@ async function sendMessage() {
 
     input.value = "";
 
-    await loadMessages();
+}
+
+
+function setupGeneralChat() {
+
+    if (generalChatChannel) {
+
+        supabaseClient
+            .removeChannel(
+                generalChatChannel
+            );
+
+    }
+
+    generalChatChannel =
+        supabaseClient
+            .channel(
+                "general-chat"
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "messages"
+                },
+                payload => {
+
+                    appendGeneralChatMessage(
+                        payload.new
+                    );
+
+                }
+            )
+            .subscribe();
 
 }
 
 
 /* =========================================================
-   GAME CHAT
+   IN-GAME CHAT
 ========================================================= */
 
 async function loadGameChatHistory() {
 
-    if (!activeRoomId) return;
-
     const box =
         document.getElementById(
-            "in-game-messages"
+            "in-game-chat-messages"
         );
+
+    if (!box || !activeRoomId) {
+        return;
+    }
 
     const { data } =
         await supabaseClient
-            .from("game_chats")
-            .select(
-                "username,message,created_at"
-            )
+            .from("messages")
+            .select("*")
             .eq(
                 "room_id",
-                String(activeRoomId)
+                activeRoomId
             )
             .order(
                 "created_at",
-                { ascending: true }
-            );
+                {
+                    ascending: true
+                }
+            )
+            .limit(100);
 
     box.innerHTML = "";
 
-    data?.forEach(message => {
+    (data || []).forEach(
+        message => {
 
-        appendGameChat(
-            message.username,
-            message.message
-        );
+            appendGameChat(
+                message.username ||
+                "Игрок",
+                message.content ||
+                message.message ||
+                ""
+            );
 
-    });
+        }
+    );
 
 }
 
 
-async function sendGameChatMessage() {
+function appendGameChat(
+    username,
+    message
+) {
 
-    const input =
+    const box =
         document.getElementById(
-            "game-chat-input"
+            "in-game-chat-messages"
         );
 
-    const message =
-        input.value.trim();
+    if (!box) return;
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "chat-message";
+
+    div.innerHTML = `
+        <strong>
+            ${escapeHtml(username)}
+        </strong>
+        <span>
+            ${escapeHtml(message)}
+        </span>
+    `;
+
+    box.appendChild(div);
+
+    box.scrollTop =
+        box.scrollHeight;
+
+}
+
+
+async function sendGameChat() {
 
     if (
-        !message ||
         !currentUser ||
         !activeRoomId
     ) {
         return;
     }
 
-    input.value = "";
+    const input =
+        document.getElementById(
+            "in-game-chat-input"
+        );
 
-    appendGameChat(
-        usernameOf(),
-        message
-    );
+    if (!input) return;
+
+    const message =
+        input.value.trim();
+
+    if (!message) return;
 
     if (onlineChannel) {
 
@@ -3141,11 +2985,8 @@ async function sendGameChatMessage() {
     }
 
     await supabaseClient
-        .from("game_chats")
-        .insert([{
-
-            room_id:
-                String(activeRoomId),
+        .from("messages")
+        .insert({
 
             user_id:
                 currentUser.id,
@@ -3153,245 +2994,20 @@ async function sendGameChatMessage() {
             username:
                 usernameOf(),
 
-            message
+            room_id:
+                activeRoomId,
 
-        }]);
+            content:
+                message
 
-}
+        });
 
-
-function appendGameChat(
-    username,
-    message
-) {
-
-    const box =
-        document.getElementById(
-            "in-game-messages"
-        );
-
-    const line =
-        document.createElement("div");
-
-    line.className =
-        "chat-line";
-
-    line.innerHTML = `
-
-        <b>
-            ${escapeHTML(username)}:
-        </b>
-
-        ${escapeHTML(message)}
-
-    `;
-
-    box.appendChild(line);
-
-    box.scrollTop =
-        box.scrollHeight;
-
-}
-
-
-/* =========================================================
-   DIRECT MESSAGES
-========================================================= */
-
-async function findUserByUsername(
-    name
-) {
-
-    const { data } =
-        await supabaseClient
-            .from("profiles")
-            .select("id,username")
-            .ilike(
-                "username",
-                name
-            )
-            .limit(1)
-            .maybeSingle();
-
-    return data;
-
-}
-
-
-async function loadDirectMessages() {
-
-    const recipient =
-        document.getElementById(
-            "dm-recipient"
-        ).value.trim();
-
-    const box =
-        document.getElementById(
-            "dm-messages"
-        );
-
-    if (!recipient) {
-
-        box.innerHTML =
-            "Введите ник получателя.";
-
-        return;
-    }
-
-    const target =
-        await findUserByUsername(
-            recipient
-        );
-
-    if (!target) {
-
-        box.innerHTML =
-            "Игрок с таким ником не найден.";
-
-        return;
-    }
-
-    const { data, error } =
-        await supabaseClient
-            .from("direct_messages")
-            .select(
-                "sender_id,receiver_id,content,created_at"
-            )
-            .or(
-                `and(sender_id.eq.${currentUser.id},receiver_id.eq.${target.id}),and(sender_id.eq.${target.id},receiver_id.eq.${currentUser.id})`
-            )
-            .order(
-                "created_at",
-                { ascending: true }
-            );
-
-    if (error) {
-
-        box.innerHTML =
-            `<div class="error">
-                ${escapeHTML(error.message)}
-             </div>`;
-
-        return;
-    }
-
-    box.innerHTML = "";
-
-    if (!data?.length) {
-
-        box.innerHTML =
-            "Сообщений пока нет.";
-
-        return;
-    }
-
-    data.forEach(message => {
-
-        const line =
-            document.createElement("div");
-
-        line.className =
-            "chat-line";
-
-        const mine =
-            message.sender_id ===
-            currentUser.id;
-
-        line.innerHTML = `
-
-            <b>
-                ${mine
-                    ? "Вы"
-                    : escapeHTML(target.username)}:
-            </b>
-
-            ${escapeHTML(message.content)}
-
-        `;
-
-        box.appendChild(line);
-
-    });
-
-    box.scrollTop =
-        box.scrollHeight;
-
-}
-
-
-async function sendDirectMessage() {
-
-    const recipient =
-        document.getElementById(
-            "dm-recipient"
-        ).value.trim();
-
-    const input =
-        document.getElementById(
-            "dm-input"
-        );
-
-    const content =
-        input.value.trim();
-
-    if (!recipient || !content) {
-        return;
-    }
-
-    const target =
-        await findUserByUsername(
-            recipient
-        );
-
-    if (!target) {
-
-        alert(
-            "Пользователь не найден."
-        );
-
-        return;
-    }
-
-    if (
-        target.id ===
-        currentUser.id
-    ) {
-
-        alert(
-            "Нельзя отправить сообщение самому себе."
-        );
-
-        return;
-    }
-
-    const { error } =
-        await supabaseClient
-            .from("direct_messages")
-            .insert([{
-
-                sender_id:
-                    currentUser.id,
-
-                receiver_id:
-                    target.id,
-
-                content
-
-            }]);
-
-    if (error) {
-
-        alert(
-            "Ошибка: " +
-            error.message
-        );
-
-        return;
-    }
+    appendGameChat(
+        usernameOf(),
+        message
+    );
 
     input.value = "";
-
-    await loadDirectMessages();
 
 }
 
@@ -3400,718 +3016,230 @@ async function sendDirectMessage() {
    PLAYERS
 ========================================================= */
 
-async function openPlayers() {
-
-    showSection(
-        "players-section"
-    );
-
-    await loadPlayers();
-
-}
-
-
 async function loadPlayers() {
 
-    const box =
+    const container =
         document.getElementById(
             "players-list"
         );
 
-    box.innerHTML =
-        "Загрузка...";
+    if (!container) return;
+
+    container.innerHTML =
+        "<div>Загрузка игроков...</div>";
 
     const { data, error } =
         await supabaseClient
             .from("profiles")
-            .select(
-                "username,rating"
-            )
+            .select("*")
             .order(
                 "rating",
-                { ascending: false }
+                {
+                    ascending: false
+                }
             )
             .limit(100);
 
     if (error) {
 
-        box.innerHTML =
-            `<div class="error">
-                ${escapeHTML(error.message)}
-             </div>`;
+        console.error(
+            "Players load error:",
+            error
+        );
+
+        container.innerHTML =
+            "<div>Не удалось загрузить игроков.</div>";
 
         return;
     }
 
-    box.innerHTML = "";
+    container.innerHTML = "";
 
-    data?.forEach(player => {
+    (data || []).forEach(
+        player => {
 
-        const div =
-            document.createElement("div");
+            const div =
+                document.createElement(
+                    "div"
+                );
 
-        div.className =
-            "list-item";
+            div.className =
+                "player-card";
 
-        div.innerHTML = `
+            div.innerHTML = `
+                <div>
+                    <strong>
+                        ${escapeHtml(
+                            player.username ||
+                            "Игрок"
+                        )}
+                    </strong>
+                </div>
 
-            ♟️ <b>
-                ${escapeHTML(player.username)}
-            </b>
+                <div>
+                    Рейтинг:
+                    ${player.rating || 1200}
+                </div>
+            `;
 
-            — ⭐ ${player.rating ?? 1200}
+            container.appendChild(div);
 
-        `;
-
-        box.appendChild(div);
-
-    });
+        }
+    );
 
 }
 
 
 /* =========================================================
-   CLUBS
+   PROFILE
 ========================================================= */
 
-async function openClubsSection() {
+async function loadProfile() {
 
-    showSection(
-        "clubs-section"
-    );
-
-    await loadClubs();
-
-}
-
-
-async function loadClubs() {
-
-    const list =
-        document.getElementById(
-            "clubs-list"
-        );
-
-    list.innerHTML =
-        "Загрузка...";
-
-    const { data, error } =
-        await supabaseClient
-            .from("clubs")
-            .select(
-                "id,name,description,created_at"
-            )
-            .order(
-                "created_at",
-                { ascending: false }
-            );
-
-    if (error) {
-
-        list.innerHTML =
-            `<div class="error">
-                ${escapeHTML(error.message)}
-             </div>`;
-
-        return;
-    }
-
-    if (!data?.length) {
-
-        list.innerHTML =
-            "Клубов пока нет.";
-
-        return;
-    }
-
-    list.innerHTML = "";
-
-    data.forEach(club => {
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "list-item";
-
-        div.innerHTML = `
-
-            <div class="list-item-header">
-
-                <span>
-                    <b>
-                        ${escapeHTML(club.name)}
-                    </b>
-
-                    <br>
-
-                    <small>
-                        ${escapeHTML(
-                            club.description || ""
-                        )}
-                    </small>
-                </span>
-
-                <button class="bot-btn small-btn">
-                    Открыть
-                </button>
-
-            </div>
-
-        `;
-
-        div.querySelector("button")
-            .onclick =
-            () => openClubDetail(
-                club.id,
-                club.name,
-                club.description
-            );
-
-        list.appendChild(div);
-
-    });
-
-}
-
-
-async function openClubDetail(
-    id,
-    name,
-    description
-) {
-
-    showSection(
-        "club-detail-section"
-    );
-
-    document.getElementById(
-        "club-detail-name"
-    ).textContent =
-        name;
-
-    document.getElementById(
-        "club-detail-desc"
-    ).textContent =
-        description ||
-        "Без описания";
-
-    const box =
-        document.getElementById(
-            "club-members-list"
-        );
-
-    box.innerHTML =
-        "Загрузка...";
+    if (!currentUser) return;
 
     const { data } =
         await supabaseClient
-            .from("club_members")
-            .select("user_id")
-            .eq(
-                "club_id",
-                id
-            );
-
-    box.innerHTML = "";
-
-    if (!data?.length) {
-
-        box.innerHTML =
-            "Участников пока нет.";
-
-        return;
-    }
-
-    data.forEach(member => {
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "chat-line";
-
-        div.textContent =
-            `♟️ Игрок ${member.user_id.slice(0,8)}...`;
-
-        box.appendChild(div);
-
-    });
-
-}
-
-
-/* =========================================================
-   TOURNAMENTS
-========================================================= */
-
-async function openTournamentsSection() {
-
-    showSection(
-        "tournaments-section"
-    );
-
-    await loadTournaments();
-
-}
-
-
-async function loadTournaments() {
-
-    const list =
-        document.getElementById(
-            "tournaments-list"
-        );
-
-    list.innerHTML =
-        "Загрузка...";
-
-    const { data, error } =
-        await supabaseClient
-            .from("tournaments")
+            .from("profiles")
             .select("*")
-            .order(
-                "created_at",
-                { ascending: false }
-            );
-
-    if (error) {
-
-        list.innerHTML =
-            `<div class="error">
-                ${escapeHTML(error.message)}
-             </div>`;
-
-        return;
-    }
-
-    if (!data?.length) {
-
-        list.innerHTML =
-            "Активных турниров нет.";
-
-        return;
-    }
-
-    const { data: parts } =
-        await supabaseClient
-            .from("tournament_participants")
-            .select("tournament_id")
             .eq(
-                "user_id",
+                "id",
                 currentUser.id
-            );
+            )
+            .maybeSingle();
 
-    const joined =
-        new Set(
-            parts?.map(
-                p => p.tournament_id
-            ) || []
+    if (!data) return;
+
+    const usernameElement =
+        document.getElementById(
+            "profile-username"
         );
 
-    list.innerHTML = "";
-
-    data.forEach(tournament => {
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "list-item";
-
-        const isJoined =
-            joined.has(
-                tournament.id
-            );
-
-        div.innerHTML = `
-
-            <div class="list-item-header">
-
-                <span>
-
-                    <b>
-                        ${escapeHTML(
-                            tournament.title
-                        )}
-                    </b>
-
-                    <br>
-
-                    <small>
-                        ${escapeHTML(
-                            tournament.format || ""
-                        )}
-                    </small>
-
-                </span>
-
-                ${
-                    isJoined
-                        ? `<span class="success">
-                             ✓ Участник
-                           </span>`
-                        : `<button class="purple-btn small-btn">
-                             Участвовать
-                           </button>`
-                }
-
-            </div>
-
-        `;
-
-        if (!isJoined) {
-
-            div.querySelector("button")
-                .onclick =
-                () => joinTournament(
-                    tournament.id
-                );
-
-        }
-
-        list.appendChild(div);
-
-    });
-
-}
-
-
-async function joinTournament(id) {
-
-    const { error } =
-        await supabaseClient
-            .from("tournament_participants")
-            .insert([{
-
-                tournament_id:
-                    id,
-
-                user_id:
-                    currentUser.id
-
-            }]);
-
-    if (error) {
-
-        alert(
-            error.message
+    const ratingElement =
+        document.getElementById(
+            "profile-rating"
         );
 
-        return;
+    const emailElement =
+        document.getElementById(
+            "profile-email"
+        );
+
+    if (usernameElement) {
+
+        usernameElement.textContent =
+            data.username ||
+            "Игрок";
+
     }
 
-    loadTournaments();
+    if (ratingElement) {
+
+        ratingElement.textContent =
+            data.rating ||
+            1200;
+
+    }
+
+    if (emailElement) {
+
+        emailElement.textContent =
+            currentUser.email ||
+            "";
+
+    }
 
 }
 
 
 /* =========================================================
-   PUZZLES
+   LOGOUT
 ========================================================= */
 
-async function openPuzzlesSection() {
+async function handleLogout() {
 
-    showSection(
-        "puzzles-section"
-    );
+    await cleanupGame();
 
-    await loadNextPuzzle();
+    await supabaseClient.auth.signOut();
 
-}
+    currentUser = null;
 
+    activeRoomId = null;
 
-async function loadNextPuzzle() {
+    isOnlineGame = false;
 
-    const { data } =
-        await supabaseClient
-            .from("puzzles")
-            .select("*")
-            .limit(20);
-
-    if (!data?.length) {
-
-        puzzleGame.load(
-            "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3"
-        );
-
-        currentPuzzleData = {
-            moves:
-                "c6d4 f3d4 e5d4"
-        };
-
-    } else {
-
-        currentPuzzleData =
-            data[
-                Math.floor(
-                    Math.random() *
-                    data.length
-                )
-            ];
-
-        puzzleGame.load(
-            currentPuzzleData.fen
-        );
-
-    }
-
-    puzzleSelectedSquare = null;
+    gameFinished = false;
 
     document.getElementById(
-        "puzzle-status"
-    ).textContent =
-        "Найдите лучший ход!";
+        "auth-section"
+    ).style.display = "block";
 
     document.getElementById(
-        "puzzle-status"
-    ).className =
-        "status warning";
-
-    renderPuzzleBoard();
-
-}
-
-
-function renderPuzzleBoard() {
-
-    const boardEl =
-        document.getElementById(
-            "puzzle-chessboard"
-        );
-
-    boardEl.innerHTML = "";
-
-    const board =
-        puzzleGame.board();
-
-    for (
-        let r = 0;
-        r < 8;
-        r++
-    ) {
-
-        for (
-            let c = 0;
-            c < 8;
-            c++
-        ) {
-
-            const square =
-                ["a","b","c","d","e","f","g","h"][c] +
-                (8 - r);
-
-            const el =
-                document.createElement("div");
-
-            el.className =
-                `square ${
-                    (r + c) % 2 === 0
-                        ? "light"
-                        : "dark"
-                }`;
-
-            if (
-                puzzleSelectedSquare ===
-                square
-            ) {
-                el.classList.add(
-                    "selected"
-                );
-            }
-
-            const piece =
-                board[r][c];
-
-            if (piece) {
-
-                const span =
-                    document.createElement(
-                        "span"
-                    );
-
-                span.textContent =
-                    pieceSymbols[
-                        piece.color === "w"
-                            ? piece.type.toUpperCase()
-                            : piece.type
-                    ];
-
-                span.className =
-                    piece.color === "w"
-                        ? "white-piece"
-                        : "black-piece";
-
-                el.appendChild(span);
-
-            }
-
-            el.onclick =
-                () =>
-                    onPuzzleSquareClick(
-                        square
-                    );
-
-            boardEl.appendChild(el);
-
-        }
-
-    }
-
-}
-
-
-function onPuzzleSquareClick(square) {
-
-    if (!puzzleSelectedSquare) {
-
-        const piece =
-            puzzleGame.get(square);
-
-        if (!piece) return;
-
-        puzzleSelectedSquare =
-            square;
-
-        renderPuzzleBoard();
-
-        return;
-    }
-
-    const move =
-        puzzleGame.move({
-
-            from:
-                puzzleSelectedSquare,
-
-            to:
-                square,
-
-            promotion:
-                "q"
-
-        });
-
-    puzzleSelectedSquare = null;
-
-    renderPuzzleBoard();
-
-    const status =
-        document.getElementById(
-            "puzzle-status"
-        );
-
-    if (!move) {
-
-        status.textContent =
-            "❌ Неверный ход. Попробуйте ещё раз.";
-
-        status.className =
-            "status error";
-
-        return;
-    }
-
-    /*
-       Если в БД есть поле moves,
-       проверяем первый ход задачи.
-    */
-
-    if (
-        currentPuzzleData?.moves
-    ) {
-
-        const firstMove =
-            currentPuzzleData.moves
-                .split(/\s+/)[0];
-
-        const actual =
-            `${move.from}${move.to}`;
-
-        if (
-            actual === firstMove
-        ) {
-
-            status.textContent =
-                "✅ Правильно!";
-
-            status.className =
-                "status success";
-
-        } else {
-
-            status.textContent =
-                "❌ Это не лучший ход.";
-
-            status.className =
-                "status error";
-
-        }
-
-    } else {
-
-        status.textContent =
-            "✅ Ход выполнен.";
-
-        status.className =
-            "status success";
-
-    }
+        "main-app"
+    ).style.display = "none";
 
 }
 
 
 /* =========================================================
-   KEYBOARD
+   NAVIGATION
+========================================================= */
+
+function openHall() {
+
+    showSection(
+        "hall-section"
+    );
+
+    loadOnlineRooms();
+
+}
+
+
+function openPlayers() {
+
+    showSection(
+        "players-section"
+    );
+
+    loadPlayers();
+
+}
+
+
+function openProfile() {
+
+    showSection(
+        "profile-section"
+    );
+
+    loadProfile();
+
+}
+
+
+function openChat() {
+
+    showSection(
+        "chat-section"
+    );
+
+    loadGeneralChat();
+
+}
+
+
+/* =========================================================
+   INIT
 ========================================================= */
 
 document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key === "Enter" &&
-            document.activeElement?.id ===
-            "chat-input"
-        ) {
-
-            sendMessage();
-
-        }
-
-        if (
-            event.key === "Enter" &&
-            document.activeElement?.id ===
-            "game-chat-input"
-        ) {
-
-            sendGameChatMessage();
-
-        }
-
-        if (
-            event.key === "Enter" &&
-            document.activeElement?.id ===
-            "dm-input"
-        ) {
-
-            sendDirectMessage();
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   INITIALIZATION
-========================================================= */
-
-window.addEventListener(
-    "load",
+    "DOMContentLoaded",
     async () => {
 
         await checkUserSession();
+
+        setupGeneralChat();
 
     }
 );
@@ -4119,4 +3247,4 @@ window.addEventListener(
 </script>
 
 </body>
-</html>
+</html>        
