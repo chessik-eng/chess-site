@@ -4358,6 +4358,154 @@ window.addEventListener(
 );
 
 </script>
+<!-- ===================================================== -->
+<!-- АДМИН-ПАНЕЛЬ С ВХОДОМ ПО ПАРОЛЮ -->
+<!-- ===================================================== -->
 
+<!-- 1. Экран ввода пароля -->
+<div class="card section fade-section" id="admin-login-screen" style="display:none; z-index:1000;">
+    <h2>🔐 Вход администратора</h2>
+    <p>Введите пароль для доступа к панели управления.</p>
+    
+    <input type="password" id="admin-password-input" placeholder="Пароль" style="margin-bottom:12px;">
+    <button class="btn-login" style="width:100%;" onclick="adminLogin()">Войти</button>
+    <div id="admin-login-error" class="status error" style="margin-top:10px;"></div>
+</div>
+
+<!-- 2. Сама панель администратора -->
+<div class="card section fade-section" id="admin-panel-section" style="display:none;">
+    <h2>🛠 Панель администратора</h2>
+    <div id="admin-panel-status" class="status success"></div>
+
+    <div style="text-align:left; margin-bottom:15px;">
+        <b>Управление игроками:</b>
+    </div>
+    <input id="admin-target-username" placeholder="Ник игрока" style="width:60%; margin-right:5px;">
+    <input id="admin-target-rating" type="number" placeholder="Новый рейтинг" style="width:30%;">
+    <button class="purple-btn" style="width:100%; margin-top:8px;" onclick="adminSetRating()">Установить рейтинг</button>
+
+    <div style="text-align:left; margin-top:20px; margin-bottom:15px;">
+        <b>Управление клубами:</b>
+    </div>
+    <input id="admin-club-name" placeholder="Название клуба" style="width:100%; margin-bottom:8px;">
+    <textarea id="admin-club-desc" placeholder="Описание клуба" style="width:100%; height:60px; margin-bottom:8px;"></textarea>
+    <button class="purple-btn" style="width:100%;" onclick="adminCreateClub()">Создать клуб</button>
+
+    <div style="text-align:left; margin-top:20px; margin-bottom:15px;">
+        <b>Модерация:</b>
+    </div>
+    <p style="font-size:12px; color:#999;">Удаление данных из таблиц Supabase.</p>
+    <input id="admin-delete-table" placeholder="Название таблицы" style="width:100%; margin-bottom:8px;">
+    <input id="admin-delete-id" placeholder="ID записи" style="width:100%; margin-bottom:8px;">
+    <button class="btn-reg" style="width:100%;" onclick="adminDeleteRecord()">Удалить запись</button>
+
+    <button class="btn-back" onclick="adminLogout()" style="margin-top:20px;">
+        ← Выйти из админки
+    </button>
+</div>
+
+<!-- 3. Кнопка вызова в Главном зале -->
+<!-- Вставьте эту кнопку в ваш #game-hall рядом с кнопкой "Выйти" -->
+<button class="purple-btn" id="btn-admin" style="display:none;" onclick="openAdminGate()">👑 Админ-панель</button>
+
+
+<script>
+/* =========================================================
+   ADMIN PANEL LOGIC (Вход по паролю)
+========================================================= */
+
+const ADMIN_PASSWORD = "SaakyanElizaveta555";
+let isAdminSession = false;
+
+// Открытие экрана ввода пароля
+function openAdminGate() {
+    showSection("admin-login-screen");
+    document.getElementById("admin-password-input").value = "";
+    document.getElementById("admin-login-error").textContent = "";
+}
+
+// Проверка пароля
+function adminLogin() {
+    const pass = document.getElementById("admin-password-input").value;
+    if (pass === ADMIN_PASSWORD) {
+        isAdminSession = true;
+        showSection("admin-panel-section");
+        document.getElementById("admin-panel-status").textContent = "Вы вошли как Администратор";
+        document.getElementById("btn-admin").style.display = "inline-block"; // Показываем кнопку в зале
+    } else {
+        document.getElementById("admin-login-error").textContent = "Неверный пароль.";
+    }
+}
+
+// Выход из режима админа
+function adminLogout() {
+    isAdminSession = false;
+    document.getElementById("btn-admin").style.display = "none";
+    showSection("game-hall");
+}
+
+// Функция для кнопки в зале (чтобы не вводить пароль каждый раз, пока сессия активна)
+function openAdminPanel() {
+    if (isAdminSession) {
+        showSection("admin-panel-section");
+    } else {
+        openAdminGate();
+    }
+}
+
+// Установка рейтинга игроку
+async function adminSetRating() {
+    if (!isAdminSession) return;
+    const username = document.getElementById("admin-target-username").value.trim();
+    const rating = parseInt(document.getElementById("admin-target-rating").value);
+    if (!username || isNaN(rating)) { setMessage("Введите ник и рейтинг.", "error"); return; }
+
+    const { data: target } = await supabaseClient.from("profiles").select("id").eq("username", username).maybeSingle();
+    if (!target) { setMessage("Игрок не найден.", "error"); return; }
+
+    const { error } = await supabaseClient.from("profiles").update({ rating: rating }).eq("id", target.id);
+    if (error) { setMessage("Ошибка БД: " + error.message, "error"); }
+    else { setMessage(`Рейтинг ${username} установлен на ${rating}`, "success"); }
+}
+
+// Создание клуба
+async function adminCreateClub() {
+    if (!isAdminSession) return;
+    const name = document.getElementById("admin-club-name").value.trim();
+    const desc = document.getElementById("admin-club-desc").value.trim();
+    if (!name) { setMessage("Введите название.", "error"); return; }
+
+    const { error } = await supabaseClient.from("clubs").insert([{ name: name, description: desc, owner_id: currentUser.id }]);
+    if (error) { setMessage("Ошибка: " + error.message, "error"); }
+    else { setMessage(`Клуб "${name}" создан`, "success"); document.getElementById("admin-club-name").value = ""; document.getElementById("admin-club-desc").value = ""; }
+}
+
+// Удаление записи
+async function adminDeleteRecord() {
+    if (!isAdminSession) return;
+    const table = document.getElementById("admin-delete-table").value.trim();
+    const id = document.getElementById("admin-delete-id").value.trim();
+    if (!table || !id) { setMessage("Укажите таблицу и ID.", "error"); return; }
+
+    const protectedTables = ["profiles", "auth.users", "rooms", "clubs"];
+    if (protectedTables.includes(table)) { setMessage("Удаление из этой таблицы запрещено.", "error"); return; }
+
+    const { error } = await supabaseClient.from(table).delete().eq("id", id);
+    if (error) { setMessage("Ошибка: " + error.message, "error"); }
+    else { setMessage(`Запись ${id} из ${table} удалена`, "success"); }
+}
+</script>
+
+<style>
+/* Стили для полей админки */
+#admin-target-rating, #admin-delete-id {
+    padding: 11px;
+    border: 1px solid #363431;
+    background: #1e1c19;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+}
+</style>
 </body>
 </html>
